@@ -151,3 +151,29 @@ class ApiClient(QObject):
         except Exception as e:
             self.request_error.emit(f"Error al crear venta: {str(e)}")
             return None
+    
+    def get_dashboard_data(self):
+        """
+        Obtiene los datos del dashboard desde el backend y emite la señal data_received.
+        El diccionario emitido tiene la forma: {"type": "dashboard", "data": ...}
+        Si ocurre un error, emite la señal request_error con el mensaje correspondiente.
+        """
+        try:
+            self.set_auth_header()
+            url = f"{self.base_url}/dashboard"
+            response = self.session.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                # Emitimos la señal con el tipo 'dashboard' para que el frontend lo distinga
+                self.data_received.emit({"type": "dashboard", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener dashboard: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error de conexión al dashboard: {str(e)}")
+            return None

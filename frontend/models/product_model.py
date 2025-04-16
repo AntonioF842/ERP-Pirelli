@@ -82,6 +82,18 @@ class Product:
         """
         return self.CATEGORIAS.get(self.categoria, "Desconocida")
     
+    @property
+    def descripcion_display(self):
+        """
+        Devuelve la descripción o un mensaje por defecto si está vacía.
+        
+        Returns:
+            str: Descripción del producto o mensaje por defecto
+        """
+        if not self.descripcion or str(self.descripcion).strip() == "":
+            return "Sin descripción disponible"
+        return self.descripcion
+    
     @staticmethod
     def get_categorias_lista():
         """

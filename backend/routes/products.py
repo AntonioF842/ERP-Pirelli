@@ -8,7 +8,7 @@ products_bp = Blueprint('products_bp', __name__)
 @login_required
 def get_products():
     products = Producto.query.all()
-    products_list = [{"id_producto": p.id_producto, "codigo": p.codigo, "nombre": p.nombre, "precio": p.precio, "categoria": p.categoria} for p in products]
+    products_list = [{"id_producto": p.id_producto, "codigo": p.codigo, "nombre": p.nombre, "descripcion": p.descripcion if p.descripcion else "Sin descripción disponible", "precio": p.precio, "categoria": p.categoria} for p in products]
     return jsonify(products_list)
 
 @products_bp.route('/products/<int:id>', methods=['GET'])
@@ -17,7 +17,7 @@ def get_product(id):
     product = Producto.query.get(id)
     if not product:
         return jsonify({"error": "Producto no encontrado"}), 404
-    return jsonify({"id_producto": product.id_producto, "codigo": product.codigo, "nombre": product.nombre, "precio": product.precio, "categoria": product.categoria})
+    return jsonify({"id_producto": product.id_producto, "codigo": product.codigo, "nombre": product.nombre, "descripcion": product.descripcion if product.descripcion else "Sin descripción disponible", "precio": product.precio, "categoria": product.categoria})
 
 @products_bp.route('/products', methods=['POST'])
 @login_required

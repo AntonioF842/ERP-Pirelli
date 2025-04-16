@@ -93,19 +93,76 @@ class SalesListView(QWidget):
         # Solicitar datos al backend
         self.api_client.get_sales()
     
-    def on_request_success(self, endpoint, data):
-        """Maneja la respuesta exitosa de la API"""
-        if endpoint != "ventas":
+    def on_request_success(self, data):
+        """Maneja la respuesta exitosa de la API para ventas"""
+        # Verificar si los datos son relevantes para esta vista
+        if not self._is_sales_data(data):
             return
             
         # Limpiar tabla
         self.sales_table.setRowCount(0)
         
+        # Extraer la lista de ventas de forma segura
+        ventas = self._extract_sales_data(data)
+        if not ventas:
+            print("No se encontraron datos de ventas válidos")
+            return
+            
         # Filtrar datos si es necesario
-        filtered_data = self.filter_data(data)
+        filtered_data = self.filter_data(ventas)
         
         # Llenar tabla con datos
-        for row, sale in enumerate(filtered_data):
+        self._populate_table(filtered_data)
+    
+    def _is_sales_data(self, data):
+        """Determina si la respuesta contiene datos de ventas"""
+        if not isinstance(data, dict):
+            print("DEBUG: Respuesta ignorada, no es un diccionario:", type(data))
+            return False
+            
+        # Verificar si es una respuesta de ventas
+        if data.get('type') == 'ventas' and 'data' in data:
+            return True
+        elif 'ventas' in data:
+            return True
+        elif any(key in data for key in ['id_venta', 'ventas_list', 'sales']):
+            return True
+            
+        print("DEBUG: Respuesta ignorada, no es de ventas:", 
+              data.get('type') if 'type' in data else "sin tipo")
+        return False
+    
+    def _extract_sales_data(self, data):
+        """Extrae la lista de ventas de diferentes estructuras de datos posibles"""
+        if not isinstance(data, dict):
+            return []
+            
+        # Intentar extraer datos de diferentes estructuras posibles
+        if 'data' in data and isinstance(data['data'], list):
+            return data['data']
+        elif 'ventas' in data and isinstance(data['ventas'], list):
+            return data['ventas']
+        elif 'sales' in data and isinstance(data['sales'], list):
+            return data['sales']
+        elif 'ventas_list' in data and isinstance(data['ventas_list'], list):
+            return data['ventas_list']
+        elif 'results' in data and isinstance(data['results'], list):
+            return data['results']
+        elif isinstance(data.get('data'), dict) and 'items' in data['data'] and isinstance(data['data']['items'], list):
+            return data['data']['items']
+        elif isinstance(data, list):
+            return data
+            
+        # Si llegamos aquí, no pudimos encontrar una lista de ventas
+        print("Estructura de datos no reconocida:", data)
+        return []
+    
+    def _populate_table(self, sales_data):
+        """Llena la tabla con los datos de ventas"""
+        for row, sale in enumerate(sales_data):
+            if not isinstance(sale, dict):
+                continue  # Salta filas que no sean dict
+                
             self.sales_table.insertRow(row)
             
             # ID
