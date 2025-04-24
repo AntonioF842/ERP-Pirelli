@@ -13,6 +13,8 @@ class ProductDetailView(QDialog):
     
     def __init__(self, api_client, product_data, parent=None):
         super().__init__(parent)
+        from utils.theme import Theme
+        Theme.apply_window_light_theme(self)
         
         self.api_client = api_client
         self.product_data = product_data

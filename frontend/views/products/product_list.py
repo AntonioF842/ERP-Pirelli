@@ -1,5 +1,3 @@
-
-
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTableView, QHeaderView, QLineEdit, QComboBox, QFrame,
@@ -7,7 +5,8 @@ from PyQt6.QtWidgets import (
     QAbstractItemView, QSplitter, QToolBar, QStatusBar, QSizePolicy
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSortFilterProxyModel, QThread, QSize
-from PyQt6.QtGui import QIcon, QAction, QStandardItemModel, QStandardItem, QFont, QColor, QPalette, QPixmap
+from PyQt6.QtGui import QIcon, QAction, QStandardItemModel, QStandardItem, QFont, QColor
+from utils.theme import Theme
 
 class ProductListView(QWidget):
     """Vista de listado de productos para ERP Pirelli"""
@@ -17,6 +16,8 @@ class ProductListView(QWidget):
 
     def __init__(self, api_client):
         super().__init__()
+        from utils.theme import Theme
+        Theme.apply_window_light_theme(self)
 
         self.api_client = api_client
 
@@ -37,15 +38,13 @@ class ProductListView(QWidget):
         self.proxy_model.setFilterKeyColumn(-1)  # Buscar en todas las columnas
         self.setup_filter_proxy()
 
-        # Definir colores corporativos Pirelli
-        self.pirelli_red = "#D50000"
-        self.pirelli_yellow = "#FFEB3B"
-        self.pirelli_dark = "#212121"
-        self.pirelli_gray = "#E0E0E0"
-        self.pirelli_light = "#F5F5F5"
+        # Colores corporativos Pirelli (ahora tomados del tema)
+        self.pirelli_red = Theme.SECONDARY_COLOR
+        self.pirelli_yellow = Theme.ACCENT_COLOR
+        self.pirelli_dark = Theme.PRIMARY_COLOR
+        self.pirelli_light = Theme.LIGHT_BG
 
         self.init_ui()
-        self.apply_pirelli_styles()
 
         # Cargar datos iniciales
         self.refresh_data()
@@ -55,100 +54,19 @@ class ProductListView(QWidget):
 
         # Layout principal
         main_layout = QVBoxLayout(self)
-        main_layout.setSpacing(0)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Toolbar superior
-        self.toolbar = QToolBar()
-        self.toolbar.setIconSize(QSize(24, 24))
-        self.toolbar.setMovable(False)
-
-        # Logo Pirelli
-        logo_label = QLabel()
-        logo_pixmap = QPixmap("resources/icons/pirelli_logo.png")
-        if not logo_pixmap.isNull():
-            logo_label.setPixmap(logo_pixmap.scaled(120, 40, Qt.AspectRatioMode.KeepAspectRatio))
-        else:
-            # Fallback: texto en lugar de imagen
-            logo_label = QLabel("PIRELLI ERP")
-            font = logo_label.font()
-            font.setPointSize(14)
-            font.setBold(True)
-            logo_label.setFont(font)
-        self.toolbar.addWidget(logo_label)
-        self.toolbar.addSeparator()
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
 
         # Título de sección
         title_label = QLabel("Gestión de Productos")
-        font = title_label.font()
-        font.setPointSize(14)
-        title_label.setFont(font)
-        self.toolbar.addWidget(title_label)
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+        main_layout.addWidget(title_label)
 
-        # Añadir espaciador
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.toolbar.addWidget(spacer)
+        # Barra de herramientas (similar a sales_list.py)
+        toolbar_layout = QHBoxLayout()
 
-        # Acciones de la barra de herramientas
-        refresh_action = QAction(QIcon("resources/icons/refresh.png"), "Actualizar", self)
-        refresh_action.triggered.connect(self.refresh_data)
-        self.toolbar.addAction(refresh_action)
-
-        add_action = QAction(QIcon("resources/icons/add.png"), "Nuevo Producto", self)
-        add_action.triggered.connect(self.on_add_product)
-        self.toolbar.addAction(add_action)
-
-        export_action = QAction(QIcon("resources/icons/export.png"), "Exportar", self)
-        # TODO: conectar a función de export
-        self.toolbar.addAction(export_action)
-
-        settings_action = QAction(QIcon("resources/icons/settings.png"), "Configuración", self)
-        # TODO: conectar a función de configuración
-        self.toolbar.addAction(settings_action)
-
-        main_layout.addWidget(self.toolbar)
-
-        # Contenedor principal (con margen)
-        content_widget = QWidget()
-        content_layout = QVBoxLayout(content_widget)
-        content_layout.setSpacing(15)
-        content_layout.setContentsMargins(20, 20, 20, 20)
-
-        # Panel de filtros
-        filter_frame = QFrame()
-        filter_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        filter_frame.setObjectName("filterPanel")
-        filter_layout = QHBoxLayout(filter_frame)
-        filter_layout.setSpacing(15)
-
-        # Búsqueda con icono
-        search_container = QFrame()
-        search_container.setObjectName("searchContainer")
-        search_layout = QHBoxLayout(search_container)
-        search_layout.setContentsMargins(10, 0, 10, 0)
-        search_icon = QLabel()
-        search_icon_pixmap = QPixmap("resources/icons/search.png")
-        if not search_icon_pixmap.isNull():
-            search_icon.setPixmap(search_icon_pixmap.scaled(16, 16, Qt.AspectRatioMode.KeepAspectRatio))
-        else:
-            search_icon.setText("🔍")
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Buscar productos por nombre o código...")
-        self.search_input.setMinimumHeight(36)
-        self.search_input.textChanged.connect(self.on_search_changed)
-        search_layout.addWidget(search_icon)
-        search_layout.addWidget(self.search_input)
-
-        # Filtros de categoría mejorados
-        category_container = QFrame()
-        category_container.setObjectName("categoryContainer")
-        category_layout = QHBoxLayout(category_container)
-        category_layout.setContentsMargins(10, 0, 10, 0)
-
-        category_label = QLabel("Categoría:")
+        # Filtro de categoría
         self.category_filter = QComboBox()
-        self.category_filter.setMinimumHeight(36)
         self.category_filter.addItem("Todas las categorías", "")
         self.category_filter.addItem("Automóvil", "automovil")
         self.category_filter.addItem("Motocicleta", "motocicleta")
@@ -156,54 +74,48 @@ class ProductListView(QWidget):
         self.category_filter.addItem("Industrial", "industrial")
         self.category_filter.addItem("Competición", "competicion")
         self.category_filter.currentIndexChanged.connect(self.on_category_changed)
-        category_layout.addWidget(category_label)
-        category_layout.addWidget(self.category_filter)
 
         # Filtro de estado
-        status_container = QFrame()
-        status_container.setObjectName("statusContainer")
-        status_layout = QHBoxLayout(status_container)
-        status_layout.setContentsMargins(10, 0, 10, 0)
-
-        status_label = QLabel("Estado:")
         self.status_filter = QComboBox()
-        self.status_filter.setMinimumHeight(36)
         self.status_filter.addItem("Todos", "")
         self.status_filter.addItem("Activo", "activo")
         self.status_filter.addItem("Descontinuado", "descontinuado")
         self.status_filter.addItem("En oferta", "oferta")
         self.status_filter.currentIndexChanged.connect(self._on_filters_changed)
-        status_layout.addWidget(status_label)
-        status_layout.addWidget(self.status_filter)
 
-        # Botón para limpiar filtros
-        clear_button = QPushButton("Limpiar filtros")
-        clear_button.setMinimumHeight(36)
-        clear_button.setObjectName("secondaryButton")
-        clear_button.clicked.connect(self.clear_filters)
+        # Campo de búsqueda
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Buscar por nombre o código...")
+        self.search_input.textChanged.connect(self.on_search_changed)
 
-        # Agregar widgets al layout de filtros
-        filter_layout.addWidget(search_container, 4)
-        filter_layout.addWidget(category_container, 2)
-        filter_layout.addWidget(status_container, 2)
-        filter_layout.addWidget(clear_button, 1)
+        # Botón de búsqueda
+        search_btn = QPushButton("Buscar")
+        search_btn.clicked.connect(self._on_filters_changed)
 
-        content_layout.addWidget(filter_frame)
+        # Botón para añadir
+        self.add_btn = QPushButton("Nuevo Producto")
+        self.add_btn.setIcon(QIcon("resources/icons/add.png"))
+        self.add_btn.clicked.connect(self.on_add_product)
 
-        # Contadores y estadísticas
-        stats_frame = QFrame()
-        stats_frame.setObjectName("statsPanel")
-        stats_layout = QHBoxLayout(stats_frame)
-        self.total_label = QLabel("Total de productos: <b>0</b>")
-        self.active_label = QLabel("Productos activos: <b>0</b>")
-        self.discontinued_label = QLabel("Productos descontinuados: <b>0</b>")
-        stats_layout.addWidget(self.total_label)
-        stats_layout.addWidget(self.active_label)
-        stats_layout.addWidget(self.discontinued_label)
-        stats_layout.addStretch()
-        content_layout.addWidget(stats_frame)
+        # Botón de actualizar
+        self.refresh_btn = QPushButton("Actualizar")
+        self.refresh_btn.setIcon(QIcon("resources/icons/refresh.png"))
+        self.refresh_btn.clicked.connect(self.refresh_data)
 
-        # Tabla de productos con estilo mejorado
+        # Agregar widgets a la barra de herramientas
+        toolbar_layout.addWidget(QLabel("Filtrar por categoría:"))
+        toolbar_layout.addWidget(self.category_filter)
+        toolbar_layout.addWidget(QLabel("Estado:"))
+        toolbar_layout.addWidget(self.status_filter)
+        toolbar_layout.addWidget(self.search_input)
+        toolbar_layout.addWidget(search_btn)
+        toolbar_layout.addStretch()
+        toolbar_layout.addWidget(self.add_btn)
+        toolbar_layout.addWidget(self.refresh_btn)
+
+        main_layout.addLayout(toolbar_layout)
+
+        # Tabla de productos
         self.product_table = QTableView()
         self.product_table.setModel(self.proxy_model)
         self.product_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -213,44 +125,31 @@ class ProductListView(QWidget):
         self.product_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.product_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # ID
         self.product_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Código
-        self.product_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)  # Estado
+        self.product_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Estado
         self.product_table.verticalHeader().setVisible(False)
         self.product_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.product_table.customContextMenuRequested.connect(self.show_context_menu)
         self.product_table.doubleClicked.connect(self.on_row_double_clicked)
-        self.product_table.setObjectName("productTable")
-        self.product_table.setMinimumHeight(500)
-        content_layout.addWidget(self.product_table)
+        
+        main_layout.addWidget(self.product_table)
 
-        # Barra de acciones inferior
-        action_bar = QFrame()
-        action_bar.setObjectName("actionBar")
-        action_layout = QHBoxLayout(action_bar)
-        # Botones de acción principales
-        view_button = QPushButton("Ver seleccionado")
-        view_button.setIcon(QIcon("resources/icons/view.png"))
-        view_button.setMinimumHeight(40)
-        view_button.setObjectName("primaryButton")
-        view_button.clicked.connect(lambda: self._get_selected_product_id(self.on_view_product))
-        edit_button = QPushButton("Editar")
-        edit_button.setIcon(QIcon("resources/icons/edit.png"))
-        edit_button.setMinimumHeight(40)
-        edit_button.setObjectName("primaryButton")
-        edit_button.clicked.connect(lambda: self._get_selected_product_id(self.on_edit_product))
-        delete_button = QPushButton("Eliminar")
-        delete_button.setIcon(QIcon("resources/icons/delete.png"))
-        delete_button.setMinimumHeight(40)
-        delete_button.setObjectName("dangerButton")
-        delete_button.clicked.connect(lambda: self._get_selected_product_id(self.on_delete_product))
-        action_layout.addStretch()
-        action_layout.addWidget(view_button)
-        action_layout.addWidget(edit_button)
-        action_layout.addWidget(delete_button)
-        content_layout.addWidget(action_bar)
+        # --- Agregar labels de totales debajo de la tabla ---
+        summary_layout = QHBoxLayout()
+        self.total_label = QLabel("Total de productos: <b>0</b>")
+        self.active_label = QLabel("Productos activos: <b>0</b>")
+        self.discontinued_label = QLabel("Productos descontinuados: <b>0</b>")
 
-        main_layout.addWidget(content_widget)
+        # Un poco de espacio entre textos
+        summary_layout.addWidget(self.total_label)
+        summary_layout.addSpacing(30)
+        summary_layout.addWidget(self.active_label)
+        summary_layout.addSpacing(30)
+        summary_layout.addWidget(self.discontinued_label)
+        summary_layout.addStretch()
+        main_layout.addLayout(summary_layout)
+        # --- Fin de la inserción ---
 
-        # Barra de estado inferior
+        # Barra de estado
         self.status_bar = QStatusBar()
         self.status_bar.showMessage("Sistema ERP Pirelli - Módulo de Gestión de Productos v2.1")
         main_layout.addWidget(self.status_bar)
@@ -296,171 +195,6 @@ class ProductListView(QWidget):
         except (AttributeError, IndexError):
             # En caso de error, mostrar la fila
             return True
-    
-    def apply_pirelli_styles(self):
-        """Aplica estilos corporativos de Pirelli: fondo blanco y textos siempre legibles"""
-        self.setStyleSheet(f"""
-        QWidget {{
-            background: white;
-            color: #212121; /* Muy oscuro, máxima legibilidad sobre fondo blanco */
-            font-family: 'Segoe UI', Arial, sans-serif;
-        }}
-        /* Barra de herramientas: fondo blanco, textos oscuros, sin perder íconos */
-        QToolBar {{
-            background-color: white;
-            color: #212121;
-            border: none;
-            height: 60px;
-        }}
-        QToolBar QLabel {{
-            color: #212121;
-            padding: 0 10px;
-        }}
-
-        /* TABLA */
-        QTableView {{
-            background: white;
-            color: #212121;
-            border: 1px solid #D0D0D0;
-            border-radius: 4px;
-            selection-background-color: {self.pirelli_red};
-            selection-color: white;
-            gridline-color: #E0E0E0;
-        }}
-        QTableView QTableCornerButton::section {{
-            background: #f8f8f8;
-        }}
-        QTableView::item {{
-            background: white;
-            color: #212121;
-            padding: 8px;
-            height: 40px;
-        }}
-        QTableView::item:alternate {{
-            background-color: {self.pirelli_light};
-            color: #212121;
-        }}
-
-        /* CABECERAS DE TABLA: fondo claro, letras negras/negritas */
-        QHeaderView::section {{
-            background-color: #f5f5f5;
-            color: #212121;
-            padding: 8px;
-            border: none;
-            font-weight: bold;
-        }}
-
-        /* BOTONES (contraste garantizado, nunca texto blanco sobre blanco o fondo clarísimo) */
-        QPushButton#primaryButton {{
-            background-color: {self.pirelli_red};
-            color: white; /* Siempre sobre rojo fuerte */
-            border: none;
-            border-radius: 4px;
-            padding: 6px 16px;
-            font-weight: bold;
-        }}
-        QPushButton#primaryButton:hover {{
-            background-color: #B71C1C;
-            color: white;
-        }}
-        QPushButton#secondaryButton {{
-            background-color: {self.pirelli_gray};
-            color: {self.pirelli_dark}; /* Gris claro fondo, texto oscuro */
-            border: none;
-            border-radius: 4px;
-            padding: 6px 16px;
-        }}
-        QPushButton#secondaryButton:hover {{
-            background-color: #BDBDBD;
-            color: #212121;
-        }}
-        QPushButton#dangerButton {{
-            background-color: white;
-            color: {self.pirelli_red};
-            border: 1px solid {self.pirelli_red};
-            border-radius: 4px;
-            padding: 6px 16px;
-        }}
-        QPushButton#dangerButton:hover {{
-            background-color: #FFEBEE;
-            color: {self.pirelli_red};
-        }}
-
-        QComboBox, QLineEdit {{
-            border: 1px solid #BDBDBD;
-            border-radius: 4px;
-            padding: 6px;
-            background-color: white;
-            color: #212121;
-        }}
-        QComboBox:focus, QLineEdit:focus {{
-            border: 1.5px solid {self.pirelli_red};
-            color: #212121;
-        }}
-
-        /* Panel de filtros blanco con textos oscuros */
-        QFrame#filterPanel {{
-            background-color: white;
-            border-radius: 4px;
-            padding: 15px;
-        }}
-        QFrame#statsPanel {{
-            background-color: #fcfcfc;
-            border-radius: 4px;
-            border: 1px solid #eeeeee;
-            color: #212121;
-            padding: 10px;
-        }}
-        QFrame#actionBar {{
-            margin-top: 10px;
-            background: transparent;
-        }}
-
-        QStatusBar {{
-            background-color: white;
-            color: #212121;
-            padding: 5px;
-        }}
-
-        QMenu {{
-            background-color: white;
-            color: #212121;
-            border: 1px solid #D0D0D0;
-        }}
-        QMenu::item {{
-            background: white;
-            color: #212121;
-            padding: 6px 25px 6px 20px;
-        }}
-        QMenu::item:selected {{
-            background-color: {self.pirelli_light};
-            color: {self.pirelli_red};
-        }}
-
-        QFrame#searchContainer, QFrame#categoryContainer, QFrame#statusContainer {{
-            background-color: white;
-            border-radius: 4px;
-            border: 1px solid #D0D0D0;
-            color: #212121;
-        }}
-
-        QLabel, QCheckBox, QRadioButton, QListView, QTreeView, QTabBar {{
-            color: #212121;
-        }}
-        """)
-
-    def _get_selected_product_id(self, callback_func):
-        """Obtiene el ID del producto seleccionado y llama al callback"""
-        indexes = self.product_table.selectionModel().selectedRows()
-        if not indexes:
-            QMessageBox.information(self, "Selección", "Por favor, seleccione un producto primero")
-            return
-        # Obtener el ID del producto seleccionado (columna 0)
-        mapped_index = self.proxy_model.mapToSource(indexes[0])
-        row = mapped_index.row()
-        product_id = int(self.product_model.item(row, 0).text())
-        # Llamar al callback con el ID
-        callback_func(product_id)
 
     def on_search_changed(self, text):
         """Maneja el cambio en el campo de búsqueda"""
@@ -500,7 +234,6 @@ class ProductListView(QWidget):
         """Actualiza los datos de la tabla desde la API"""
         self.status_bar.showMessage("Actualizando datos de productos...")
         self.api_client.get_products()
-
 
     def load_products(self, products):
         """Carga los productos recibidos en la tabla y actualiza estadísticas"""
@@ -553,13 +286,13 @@ class ProductListView(QWidget):
             estado = getattr(product, 'estado', 'activo')
             status_item = QStandardItem(estado.capitalize())
             if estado == 'activo':
-                status_item.setForeground(QColor('#388E3C'))  # Verde
+                status_item.setForeground(QColor(Theme.SUCCESS_COLOR))
                 count_activos += 1
             elif estado == 'descontinuado':
-                status_item.setForeground(QColor('#D32F2F'))  # Rojo
+                status_item.setForeground(QColor(Theme.DANGER_COLOR))
                 count_descontinuados += 1
             elif estado == 'oferta':
-                status_item.setForeground(QColor('#1976D2'))  # Azul
+                status_item.setForeground(QColor(Theme.INFO_COLOR))
             status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             row.append(status_item)
 
@@ -646,6 +379,19 @@ class ProductListView(QWidget):
         history_action.triggered.connect(lambda: self.status_bar.showMessage(f"Mostrando historial del producto ID: {product_id}"))
 
         context_menu.exec(self.product_table.viewport().mapToGlobal(position))
+
+    def _get_selected_product_id(self, callback_func):
+        """Obtiene el ID del producto seleccionado y llama al callback"""
+        indexes = self.product_table.selectionModel().selectedRows()
+        if not indexes:
+            QMessageBox.information(self, "Selección", "Por favor, seleccione un producto primero")
+            return
+        # Obtener el ID del producto seleccionado (columna 0)
+        mapped_index = self.proxy_model.mapToSource(indexes[0])
+        row = mapped_index.row()
+        product_id = int(self.product_model.item(row, 0).text())
+        # Llamar al callback con el ID
+        callback_func(product_id)
 
     def on_view_product(self, product_id):
         """Muestra detalles de un producto, incluyendo la descripción"""
@@ -750,7 +496,6 @@ class ProductListView(QWidget):
             self.api_client.create_product(product_data)
             self.status_bar.showMessage("Creando nuevo producto...")
 
-
     def on_delete_product(self, product_id):
         """Elimina un producto"""
         reply = QMessageBox.question(
@@ -763,5 +508,3 @@ class ProductListView(QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             self.api_client.delete_product(product_id)
             self.status_bar.showMessage(f"Eliminando producto ID: {product_id}...")
-
-

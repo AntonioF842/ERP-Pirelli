@@ -1,4 +1,3 @@
-
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QGridLayout, QSizePolicy, QScrollArea, QMessageBox,
@@ -25,6 +24,8 @@ class StatisticCard(QFrame):
     """Tarjeta para mostrar una estadística con mejor visual según estética Pirelli"""
     def __init__(self, title, value, icon_path=None, color=PIRELLI_RED):
         super().__init__()
+        from utils.theme import Theme
+        Theme.apply_window_light_theme(self)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setStyleSheet(f"""
             QFrame {{

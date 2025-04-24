@@ -18,6 +18,8 @@ class MainWindow(QMainWindow):
     
     def __init__(self, api_client, user_data):
         super().__init__()
+        from utils.theme import Theme
+        Theme.apply_window_light_theme(self)
         
         self.api_client = api_client
         self.user_data = user_data

@@ -10,6 +10,8 @@ class LoginView(QWidget):
     
     def __init__(self, api_client):
         super().__init__()
+        from utils.theme import Theme
+        Theme.apply_window_light_theme(self)
         self.api_client = api_client
         self.api_client.login_success.connect(self.on_login_success)
         self.api_client.login_error.connect(self.on_login_error)

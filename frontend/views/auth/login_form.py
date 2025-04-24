@@ -12,6 +12,8 @@ class LoginForm(QWidget):
     
     def __init__(self):
         super().__init__()
+        from utils.theme import Theme
+        Theme.apply_window_light_theme(self)
         
         self.init_ui()
     

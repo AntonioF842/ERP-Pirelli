@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QMessageBox, QDialog)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
+from utils.theme import Theme
 
 class ProductForm(QDialog):
     """Formulario para crear o editar productos"""
@@ -13,6 +14,8 @@ class ProductForm(QDialog):
     
     def __init__(self, api_client, product_data=None, parent=None):
         super().__init__(parent)
+        from utils.theme import Theme
+        Theme.apply_window_light_theme(self)
         
         self.api_client = api_client
         self.product_data = product_data  # None para nuevo producto, dict para edición
@@ -40,6 +43,7 @@ class ProductForm(QDialog):
         title = "Nuevo Producto" if not self.edit_mode else "Editar Producto"
         title_label = QLabel(title)
         title_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        title_label.setProperty("heading", True)  # Usar propiedad de estilo del tema
         
         # Formulario
         form_layout = QFormLayout()
@@ -78,23 +82,11 @@ class ProductForm(QDialog):
         # Botones
         buttons_layout = QHBoxLayout()
         
+        # Usar propiedades de tema para los botones
         self.save_button = QPushButton("Guardar")
         self.save_button.setFixedHeight(40)
         self.save_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.save_button.setStyleSheet("""
-            QPushButton {
-                background-color: #d60000;
-                color: white;
-                font-weight: bold;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #ff0000;
-            }
-            QPushButton:pressed {
-                background-color: #b80000;
-            }
-        """)
+        self.save_button.setProperty("secondary", True)  # Usar propiedad de estilo del tema
         
         self.cancel_button = QPushButton("Cancelar")
         self.cancel_button.setFixedHeight(40)

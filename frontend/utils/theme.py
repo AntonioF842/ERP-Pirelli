@@ -2,7 +2,7 @@
 Configuración de temas y estilos para la aplicación
 """
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6.QtGui import QPalette, QColor, QFont
 from PyQt6.QtCore import Qt
 
@@ -169,6 +169,46 @@ class Theme:
         QMenu::item:selected {{
             background-color: #f0f0f0;
         }}
+        """
+    
+    @staticmethod
+    def apply_window_light_theme(widget: QWidget):
+        """
+        Aplica una hoja de estilos clara (fondo blanco y textos oscuros)
+        sólo a la ventana/widget indicada (no afecta toda la app).
+
+        Args:
+            widget (QWidget): Ventana principal o widget al que aplicar el tema claro.
+        """
+        widget.setStyleSheet(Theme.get_window_light_stylesheet())
+
+    @staticmethod
+    def get_window_light_stylesheet():
+        """
+        Estilos claros para una ventana/widget.
+        Se puede extender con más estilos específicos si se requiere.
+        """
+        return """
+        QWidget {
+            background-color: white;
+            color: #000000;
+        }
+        QTableWidget, QTableView {
+            background-color: white;
+            gridline-color: #e0e0e0;
+            selection-background-color: #f0f0f0;
+            selection-color: #000000;
+            border: 1px solid #cccccc;
+        }
+        QTableWidget::item:selected, QTableView::item:selected {
+            background-color: #e0e0e0;
+            color: #000000;
+        }
+        QHeaderView::section {
+            background-color: #f5f5f5;
+            color: #000000;
+            border: 1px solid #cccccc;
+        }
         """
     
     @staticmethod
