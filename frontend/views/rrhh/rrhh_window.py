@@ -1,10 +1,10 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget
 
-from views.employees.employees_list import EmployeesListView
-from views.users.users_list import UsersListView
-from views.work_areas.work_areas_list import WorkAreasListView
-from views.attendance.attendance_list import AttendanceListView
-from views.payroll.payroll_list import PayrollListView
+from views.rrhh.employees.employees_list import EmployeesListView
+from views.rrhh.users.users_list import UsersListView
+from views.rrhh.work_areas.work_areas_list import WorkAreasListView
+from views.rrhh.attendance.attendance_list import AttendanceListView
+from views.rrhh.payroll.payroll_list import PayrollListView
 
 class RecursosHumanosWindow(QMainWindow):
     def __init__(self, api_client):

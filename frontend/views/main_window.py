@@ -5,7 +5,7 @@ from PyQt6.QtGui import QIcon, QAction
 from PyQt6.QtCore import pyqtSignal
 
 from views.dashboard_view import DashboardView
-from views.rrhh_window import RecursosHumanosWindow
+from views.rrhh.rrhh_window import RecursosHumanosWindow
 # from views.inventario_window import InventarioWindow  # Crea ventanas similares para otros módulos
 # from views.produccion_window import ProduccionWindow
 # from views.ventas_window import VentasWindow
