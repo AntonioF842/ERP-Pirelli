@@ -1,6 +1,7 @@
 # backend/routes/auth.py
 from flask import Blueprint, request, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+import functools
 from models import Usuario
 from config import db, login_manager  # Importa db desde config
 
@@ -94,6 +95,7 @@ def get_current_user():
 def role_required(*roles):
     """ Decorador para restringir acceso según el rol """
     def wrapper(func):
+        @functools.wraps(func)
         @login_required
         def wrapped_function(*args, **kwargs):
             if current_user.rol not in roles:

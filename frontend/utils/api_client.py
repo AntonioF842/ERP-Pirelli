@@ -330,3 +330,510 @@ class ApiClient(QObject):
         except Exception as e:
             self.request_error.emit(f"Error de conexión al dashboard: {str(e)}")
             return None
+    
+    # --- EMPLEADOS (CRUD) ---
+    def get_employees(self):
+        """Obtiene la lista de empleados"""
+        try:
+            response = self.session.get(f"{self.base_url}/employees")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "employees", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener empleados: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener empleados: {str(e)}")
+            return []
+    
+    def get_areas_trabajo(self):
+        """
+        Obtiene la lista de áreas de trabajo desde el backend.
+        Retorna una lista de diccionarios con las áreas.
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/work_areas")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "work_areas", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener áreas de trabajo: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener áreas de trabajo: {str(e)}")
+            return []
+    
+    def get_employee(self, employee_id):
+        """Obtiene un empleado por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/employees/{employee_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener empleado: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener empleado: {str(e)}")
+            return None
+    
+    def create_employee(self, employee_data):
+        """Crea un nuevo empleado"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/employees",
+                json=employee_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_employee", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear empleado: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear empleado: {str(e)}")
+            return None
+    
+    def update_employee(self, employee_id, employee_data):
+        """Actualiza un empleado existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/employees/{employee_id}",
+                json=employee_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_employee", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar empleado: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar empleado: {str(e)}")
+            return None
+    
+    def delete_employee(self, employee_id):
+        """Elimina un empleado por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/employees/{employee_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_employee", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar empleado: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar empleado: {str(e)}")
+            return None
+    
+    # --- ASISTENCIA (CRUD) ---
+    def get_attendance(self):
+        """Obtiene la lista de registros de asistencia"""
+        try:
+            response = self.session.get(f"{self.base_url}/attendance")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "attendance", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener registros de asistencia: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener registros de asistencia: {str(e)}")
+            return []
+    
+    def get_attendance_by_id(self, attendance_id):
+        """Obtiene un registro de asistencia por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/attendance/{attendance_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener registro de asistencia: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener registro de asistencia: {str(e)}")
+            return None
+    
+    def create_attendance(self, attendance_data):
+        """Crea un nuevo registro de asistencia"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/attendance",
+                json=attendance_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_attendance", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear registro de asistencia: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear registro de asistencia: {str(e)}")
+            return None
+    
+    def update_attendance(self, attendance_id, attendance_data):
+        """Actualiza un registro de asistencia existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/attendance/{attendance_id}",
+                json=attendance_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_attendance", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar registro de asistencia: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar registro de asistencia: {str(e)}")
+            return None
+    
+    def delete_attendance(self, attendance_id):
+        """Elimina un registro de asistencia por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/attendance/{attendance_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_attendance", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar registro de asistencia: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar registro de asistencia: {str(e)}")
+            return None
+            
+    # --- USUARIOS (CRUD) ---
+    def get_users(self):
+        """Obtiene la lista de usuarios"""
+        try:
+            response = self.session.get(f"{self.base_url}/users")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "users", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener usuarios: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener usuarios: {str(e)}")
+            return []
+    
+    def get_user(self, user_id):
+        """Obtiene un usuario por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/users/{user_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener usuario: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener usuario: {str(e)}")
+            return None
+    
+    def create_user(self, user_data):
+        """Crea un nuevo usuario"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/users",
+                json=user_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_user", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear usuario: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear usuario: {str(e)}")
+            return None
+    
+    def update_user(self, user_id, user_data):
+        """Actualiza un usuario existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/users/{user_id}",
+                json=user_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_user", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar usuario: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar usuario: {str(e)}")
+            return None
+    
+    def delete_user(self, user_id):
+        """Elimina un usuario por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/users/{user_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_user", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar usuario: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar usuario: {str(e)}")
+            return None
+    
+    # --- ÁREAS DE TRABAJO (CRUD) ---
+    def get_work_areas(self):
+        """Obtiene la lista de áreas de trabajo"""
+        try:
+            response = self.session.get(f"{self.base_url}/work_areas")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "work_areas", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener áreas de trabajo: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener áreas de trabajo: {str(e)}")
+            return []
+    
+    def get_work_area(self, area_id):
+        """Obtiene un área de trabajo por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/work_areas/{area_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener área de trabajo: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener área de trabajo: {str(e)}")
+            return None
+    
+    def create_work_area(self, area_data):
+        """Crea una nueva área de trabajo"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/work_areas",
+                json=area_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_work_area", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear área de trabajo: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear área de trabajo: {str(e)}")
+            return None
+    
+    def update_work_area(self, area_id, area_data):
+        """Actualiza una área de trabajo existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/work_areas/{area_id}",
+                json=area_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_work_area", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar área de trabajo: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar área de trabajo: {str(e)}")
+            return None
+    
+    def delete_work_area(self, area_id):
+        """Elimina una área de trabajo por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/work_areas/{area_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_work_area", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar área de trabajo: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar área de trabajo: {str(e)}")
+            return None
+    
+    # --- NÓMINAS / PAYROLL (CRUD) ---
+    def get_payrolls(self):
+        """Obtiene la lista de nóminas"""
+        try:
+            response = self.session.get(f"{self.base_url}/payroll")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "payroll", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener nóminas: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener nóminas: {str(e)}")
+            return []
+    
+    def get_payroll(self, payroll_id):
+        """Obtiene una nómina por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/payroll/{payroll_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener nómina: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener nómina: {str(e)}")
+            return None
+    
+    def create_payroll(self, payroll_data):
+        """Crea una nueva nómina"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/payroll",
+                json=payroll_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_payroll", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear nómina: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear nómina: {str(e)}")
+            return None
+    
+    def update_payroll(self, payroll_id, payroll_data):
+        """Actualiza una nómina existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/payroll/{payroll_id}",
+                json=payroll_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_payroll", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar nómina: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar nómina: {str(e)}")
+            return None
+    
+    def delete_payroll(self, payroll_id):
+        """Elimina una nómina por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/payroll/{payroll_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_payroll", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar nómina: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar nómina: {str(e)}")
+            return None
