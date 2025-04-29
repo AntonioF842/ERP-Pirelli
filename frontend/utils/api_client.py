@@ -837,3 +837,775 @@ class ApiClient(QObject):
         except Exception as e:
             self.request_error.emit(f"Error al eliminar nómina: {str(e)}")
             return None
+
+    # === MÉTODOS PARA INVENTARIO ===
+    def get_inventory(self):
+        """Obtiene la lista de items de inventario"""
+        try:
+            response = self.session.get(f"{self.base_url}/inventario")
+            if response.status_code == 200:
+                data = response.json()
+                # Enriquecer resultado con nombre de producto si viene anidado
+                for item in data:
+                    if "producto" in item and isinstance(item["producto"], dict):
+                        item["producto_nombre"] = item["producto"].get("nombre", "Producto")
+                self.data_received.emit({"type": "inventory", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener inventario: {str(e)}")
+            return []
+
+    def get_inventory_item(self, inventory_id):
+        """Obtiene un registro de inventario por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/inventario/{inventory_id}")
+            if response.status_code == 200:
+                item = response.json()
+                # Enriquecer para la vista
+                if "producto" in item and isinstance(item["producto"], dict):
+                    item["producto_nombre"] = item["producto"].get("nombre", "Producto")
+                return item
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener ítem de inventario: {str(e)}")
+            return None
+
+    def create_inventory_item(self, inv_data):
+        """Crea un nuevo registro de inventario"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/inventario",
+                json=inv_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_inventory_item", result)
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear ítem de inventario: {str(e)}")
+            return None
+
+    def update_inventory_item(self, inventory_id, inv_data):
+        """Actualiza un ítem de inventario existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/inventario/{inventory_id}",
+                json=inv_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_inventory_item", result)
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar ítem de inventario: {str(e)}")
+            return None
+
+    def delete_inventory_item(self, inventory_id):
+        """Elimina un ítem de inventario por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/inventario/{inventory_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_inventory_item", result)
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar ítem de inventario: {str(e)}")
+            return None
+    
+    def delete_inventory(self, inventory_id):
+        """Elimina un registro de inventario por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/inventario/{inventory_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_inventory", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar inventario: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar inventario: {str(e)}")
+            return None
+    
+    # --- MATERIALES (CRUD) ---
+    def get_materials(self):
+        """Obtiene la lista de materiales"""
+        try:
+            response = self.session.get(f"{self.base_url}/materiales")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "materials", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener materiales: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener materiales: {str(e)}")
+            return []
+    
+    def get_material(self, material_id):
+        """Obtiene un material por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/materiales/{material_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener material: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener material: {str(e)}")
+            return None
+    
+    def create_material(self, material_data):
+        """Crea un nuevo material"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/materiales",
+                json=material_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_material", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear material: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear material: {str(e)}")
+            return None
+    
+    def update_material(self, material_id, material_data):
+        """Actualiza un material existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/materiales/{material_id}",
+                json=material_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_material", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar material: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar material: {str(e)}")
+            return None
+    
+    def delete_material(self, material_id):
+        """Elimina un material por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/materiales/{material_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_material", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar material: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar material: {str(e)}")
+            return None
+    
+    # --- PROVEEDORES (CRUD) ---
+    def get_suppliers(self):
+        """Obtiene la lista de proveedores"""
+        try:
+            response = self.session.get(f"{self.base_url}/proveedores")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "suppliers", "data": data})
+                return data
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener proveedores: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener proveedores: {str(e)}")
+            return []
+    
+    def get_supplier(self, supplier_id):
+        """Obtiene un proveedor por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/proveedores/{supplier_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener proveedor: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener proveedor: {str(e)}")
+            return None
+    
+    def create_supplier(self, supplier_data):
+        """Crea un nuevo proveedor"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/proveedores",
+                json={
+                    "nombre": supplier_data.get("name", supplier_data.get("nombre", "")),
+                    "contacto": supplier_data.get("contact", supplier_data.get("contacto", "")),
+                    "telefono": supplier_data.get("phone", supplier_data.get("telefono", "")),
+                    "email": supplier_data.get("email", ""),
+                    "tipo_material": supplier_data.get("material_type", supplier_data.get("tipo_material", ""))
+                }
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_supplier", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear proveedor: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear proveedor: {str(e)}")
+            return None
+    
+    def update_supplier(self, supplier_id, supplier_data):
+        """Actualiza un proveedor existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/proveedores/{supplier_id}",
+                json={
+                    "nombre": supplier_data.get("name", supplier_data.get("nombre", "")),
+                    "contacto": supplier_data.get("contact", supplier_data.get("contacto", "")),
+                    "telefono": supplier_data.get("phone", supplier_data.get("telefono", "")),
+                    "email": supplier_data.get("email", ""),
+                    "tipo_material": supplier_data.get("material_type", supplier_data.get("tipo_material", ""))
+                }
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_supplier", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar proveedor: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar proveedor: {str(e)}")
+            return None
+    
+    def delete_supplier(self, supplier_id):
+        """Elimina un proveedor por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/proveedores/{supplier_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_supplier", result)
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar proveedor: {response.status_code} {error_msg}")
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar proveedor: {str(e)}")
+            return None
+    
+    # --- Helpers de mapeo entre backend y frontend ---
+    def _backend_to_frontend_order(self, order):
+        """
+        Convierte una orden desde la API a formato friendly de frontend.
+        
+        Maneja tanto el formato original del backend (con campos en español)
+        como el formato nuevo (con campos en inglés) para asegurar compatibilidad.
+        """
+        # Determinar qué formato de backend estamos recibiendo
+        if "id_orden_compra" in order:
+            # Formato original (español)
+            return {
+                "po_id": order.get("id_orden_compra"),
+                "supplier_id": order.get("id_proveedor"),
+                "supplier_name": order.get("proveedor_name", order.get("nombre_proveedor", "")),
+                "user_id": order.get("id_usuario"),
+                "user_name": order.get("usuario_name", order.get("nombre_usuario", "")),
+                "date": order.get("fecha"),
+                "expected_delivery": order.get("fecha_entrega_esperada"),
+                "status": order.get("estado", ""),
+                "total": order.get("total"),
+                "details": [self._backend_to_frontend_detail(d, is_spanish=True) 
+                           for d in order.get("detalles", [])]
+            }
+        else:
+            # Formato nuevo (inglés)
+            return {
+                "po_id": order.get("po_id"),
+                "supplier_id": order.get("supplier_id"),
+                "supplier_name": order.get("supplier_name", ""),
+                "user_id": order.get("user_id"),
+                "user_name": order.get("user_name", ""),
+                "date": order.get("date"),
+                "expected_delivery": order.get("delivery_date", order.get("expected_delivery")),
+                "status": order.get("status", ""),
+                "total": order.get("total"),
+                "details": [self._backend_to_frontend_detail(d, is_spanish=False) 
+                           for d in order.get("details", [])]
+            }
+    
+    def _backend_to_frontend_detail(self, detail, is_spanish=True):
+        """
+        Convierte un detalle de orden desde el formato API al formato frontend.
+        
+        Args:
+            detail: Diccionario con datos del detalle
+            is_spanish: Indica si los campos vienen en español (True) o inglés (False)
+        """
+        if is_spanish:
+            return {
+                "detail_id": detail.get("id_detalle"),
+                "material_id": detail.get("id_material"),
+                "material_name": detail.get("material_name", detail.get("nombre_material", "")),
+                "quantity": detail.get("cantidad"),
+                "unit_price": detail.get("precio_unitario"),
+                "subtotal": detail.get("subtotal")
+            }
+        else:
+            return {
+                "detail_id": detail.get("detail_id"),
+                "material_id": detail.get("material_id"),
+                "material_name": detail.get("material_name", ""),
+                "quantity": detail.get("quantity"),
+                "unit_price": detail.get("unit_price"),
+                "subtotal": detail.get("subtotal")
+            }
+
+    def _frontend_to_backend_order(self, order):
+        """
+        Convierte una orden formato frontend a backend para el POST/PUT.
+
+        Mantiene nombres de campos consistentes con el backend.
+        """
+        return {
+            "supplier_id": order.get("supplier_id"),
+            "user_id": order.get("user_id", 1),
+            "date": order.get("date"),
+            "delivery_date": order.get("expected_delivery") or order.get("delivery_date"),
+            "status": order.get("status", "pendiente"),
+            "total": order.get("total", 0),
+            "details": [self._frontend_to_backend_detail(d) for d in order.get("details", [])]
+        }
+
+    def _frontend_to_backend_detail(self, detail):
+        """
+        Convierte un detalle de orden del formato frontend al formato backend.
+        """
+        return {
+            "material_id": detail.get("material_id"),
+            "quantity": detail.get("quantity"),
+            "unit_price": detail.get("unit_price"),
+            "subtotal": detail.get("subtotal", detail.get("quantity", 0) * detail.get("unit_price", 0))
+        }
+
+    
+    def calculate_order_total(self, details):
+        """
+        Calcula el total de una orden a partir de sus detalles.
+        
+        Args:
+            details: Lista de diccionarios con los detalles de la orden
+            
+        Returns:
+            float: El total calculado de la orden
+        """
+        total = 0
+        for detail in details:
+            quantity = detail.get("quantity", 0)
+            unit_price = detail.get("unit_price", 0)
+            subtotal = detail.get("subtotal")
+            
+            if subtotal is not None:
+                total += float(subtotal)
+            elif quantity is not None and unit_price is not None:
+                total += float(quantity) * float(unit_price)
+                
+        return round(total, 2)
+    
+    # --- ÓRDENES DE COMPRA (CRUD) ---
+    def get_purchase_orders(self):
+        """
+        Obtiene la lista de órdenes de compra.
+        
+        Realiza la conversión de formato backend a frontend automáticamente.
+        Emite la señal data_received con los datos convertidos.
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/ordenes_compra")
+            if response.status_code == 200:
+                data = response.json()
+                # Adaptación de formato a frontend
+                orders = [self._backend_to_frontend_order(o) for o in data]
+                
+                # Enriquecimiento adicional de datos si es necesario
+                for order in orders:
+                    # Asegurar que todos los campos críticos estén presentes
+                    if not order.get("supplier_name") and order.get("supplier_id"):
+                        supplier = self.get_supplier(order["supplier_id"])
+                        if supplier:
+                            order["supplier_name"] = supplier.get("nombre", "")
+                
+                self.data_received.emit({"type": "purchase_orders", "data": orders})
+                return orders
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener órdenes de compra: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener órdenes de compra: {str(e)}")
+            return []
+    
+    def get_purchase_order(self, order_id):
+        """
+        Obtiene una orden de compra por su ID.
+        
+        Args:
+            order_id: ID de la orden a obtener
+            
+        Returns:
+            dict: La orden en formato frontend o None si hubo error
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/ordenes_compra/{order_id}")
+            if response.status_code == 200:
+                order = response.json()
+                converted_order = self._backend_to_frontend_order(order)
+                
+                # Enriquecer con información adicional si es necesario
+                if not converted_order.get("supplier_name") and converted_order.get("supplier_id"):
+                    supplier = self.get_supplier(converted_order["supplier_id"])
+                    if supplier:
+                        converted_order["supplier_name"] = supplier.get("nombre", "")
+                
+                # Enriquecer detalles con nombres de materiales si es necesario
+                for detail in converted_order.get("details", []):
+                    if not detail.get("material_name") and detail.get("material_id"):
+                        material = self.get_material(detail["material_id"])
+                        if material:
+                            detail["material_name"] = material.get("nombre", "")
+                
+                return converted_order
+            else:
+                # Fallback: filtrar desde todas las órdenes
+                all_orders = self.get_purchase_orders()
+                for order in all_orders:
+                    if order.get('po_id') == order_id:
+                        return order
+                
+                self.request_error.emit(f"Error al obtener orden de compra: No se encontró la orden con ID {order_id}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener orden de compra: {str(e)}")
+            return None
+    
+    def create_purchase_order(self, order_data):
+        """
+        Crea una nueva orden de compra.
+        
+        Args:
+            order_data: Diccionario con los datos de la orden en formato frontend
+            
+        Returns:
+            dict: La orden creada en formato frontend o None si hubo error
+        """
+        try:
+            # Validar datos antes de enviar
+            if not order_data.get("supplier_id"):
+                self.request_error.emit("Error: Se requiere un proveedor para crear la orden")
+                return None
+                
+            if not order_data.get("details") or len(order_data.get("details", [])) == 0:
+                self.request_error.emit("Error: La orden debe tener al menos un detalle")
+                return None
+            
+            # Calcular/verificar el total si no está presente
+            if not order_data.get("total"):
+                order_data["total"] = self.calculate_order_total(order_data.get("details", []))
+            
+            # Convertir al formato esperado por el backend
+            payload = self._frontend_to_backend_order(order_data)
+            
+            # Realizar la petición
+            response = self.session.post(f"{self.base_url}/ordenes_compra", json=payload)
+            
+            if response.status_code in [200, 201]:
+                result = response.json()
+                processed_result = self._backend_to_frontend_order(result)
+                self.request_success.emit("create_purchase_order", processed_result)
+                return processed_result
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al crear orden de compra: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al crear orden de compra: {str(e)}")
+            return None
+    
+    def update_purchase_order(self, order_id, order_data):
+        """
+        Actualiza una orden de compra existente.
+        
+        Args:
+            order_id: ID de la orden a actualizar
+            order_data: Diccionario con los datos actualizados en formato frontend
+            
+        Returns:
+            dict: La orden actualizada en formato frontend o None si hubo error
+        """
+        try:
+            # Asegurar que el ID esté en los datos
+            order_data["po_id"] = order_id
+            
+            # Validar datos antes de enviar
+            if not order_data.get("supplier_id"):
+                self.request_error.emit("Error: Se requiere un proveedor para la orden")
+                return None
+                
+            if not order_data.get("details") or len(order_data.get("details", [])) == 0:
+                self.request_error.emit("Error: La orden debe tener al menos un detalle")
+                return None
+            
+            # Calcular/verificar el total si no está presente o ha cambiado
+            calculated_total = self.calculate_order_total(order_data.get("details", []))
+            if not order_data.get("total") or abs(float(order_data.get("total", 0)) - calculated_total) > 0.01:
+                order_data["total"] = calculated_total
+            
+            # Convertir al formato esperado por el backend
+            payload = self._frontend_to_backend_order(order_data)
+            
+            # Realizar la petición
+            response = self.session.put(
+                f"{self.base_url}/ordenes_compra/{order_id}",
+                json=payload
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                processed_result = self._backend_to_frontend_order(result)
+                self.request_success.emit("update_purchase_order", processed_result)
+                return processed_result
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al actualizar orden de compra: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar orden de compra: {str(e)}")
+            return None
+    
+    def delete_purchase_order(self, order_id):
+        """Elimina una orden de compra por su ID"""
+        try:
+            response = self.session.delete(f"{self.base_url}/ordenes_compra/{order_id}")
+            if response.status_code == 200:
+                result = response.json()
+                self.request_success.emit("delete_purchase_order", result)
+                return result
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al eliminar orden de compra: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar orden de compra: {str(e)}")
+            return None
+    
+    # --- DETALLES ÓRDENES DE COMPRA ---
+    def get_purchase_order_details(self):
+        """
+        Obtiene todos los detalles de órdenes de compra.
+        
+        Realiza la conversión de formato backend a frontend automáticamente.
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/ordenes_compra_detalle")
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Convertir los detalles al formato frontend
+                converted_details = []
+                for detail in data:
+                    converted_detail = self._backend_to_frontend_detail(detail, 
+                                                                       is_spanish="id_detalle" in detail)
+                    # Enriquecer con información adicional si es necesario
+                    if not converted_detail.get("material_name") and converted_detail.get("material_id"):
+                        material = self.get_material(converted_detail["material_id"])
+                        if material:
+                            converted_detail["material_name"] = material.get("nombre", "")
+                    
+                    converted_details.append(converted_detail)
+                
+                self.data_received.emit({"type": "purchase_order_details", "data": converted_details})
+                return converted_details
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener detalles de órdenes de compra: {response.status_code} {error_msg}")
+                return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener detalles de órdenes de compra: {str(e)}")
+            return []
+    
+    def get_purchase_order_detail(self, detail_id):
+        """
+        Obtiene un detalle de orden de compra por su ID.
+        
+        Args:
+            detail_id: ID del detalle a obtener
+            
+        Returns:
+            dict: El detalle en formato frontend o None si hubo error
+        """
+        try:
+            response = self.session.get(f"{self.base_url}/ordenes_compra_detalle/{detail_id}")
+            if response.status_code == 200:
+                detail = response.json()
+                # Convertir al formato frontend
+                converted_detail = self._backend_to_frontend_detail(detail, 
+                                                                  is_spanish="id_detalle" in detail)
+                
+                # Enriquecer con información adicional si es necesario
+                if not converted_detail.get("material_name") and converted_detail.get("material_id"):
+                    material = self.get_material(converted_detail["material_id"])
+                    if material:
+                        converted_detail["material_name"] = material.get("nombre", "")
+                
+                return converted_detail
+            else:
+                try:
+                    error_msg = response.json().get("error", response.text)
+                except Exception:
+                    error_msg = response.text
+                self.request_error.emit(f"Error al obtener detalle de orden de compra: {response.status_code} {error_msg}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener detalle de orden de compra: {str(e)}")
+            return None
+
+    # --- Métodos de utilidad para órdenes de compra ---
+    def validate_purchase_order(self, order_data):
+        """
+        Valida los datos de una orden de compra antes de enviarla al servidor.
+        
+        Args:
+            order_data: Diccionario con los datos de la orden en formato frontend
+            
+        Returns:
+            tuple: (bool, str) - (es_valido, mensaje_error)
+        """
+        # Validar campos obligatorios
+        if not order_data.get("supplier_id"):
+            return False, "Se requiere seleccionar un proveedor"
+        
+        if not order_data.get("date"):
+            return False, "Se requiere una fecha para la orden"
+        
+        # Validar detalles
+        details = order_data.get("details", [])
+        if not details:
+            return False, "La orden debe tener al menos un detalle"
+        
+        for i, detail in enumerate(details):
+            if not detail.get("material_id"):
+                return False, f"El detalle #{i+1} requiere un material"
+            
+            if not detail.get("quantity") or float(detail.get("quantity", 0)) <= 0:
+                return False, f"El detalle #{i+1} requiere una cantidad válida"
+            
+            if not detail.get("unit_price") or float(detail.get("unit_price", 0)) < 0:
+                return False, f"El detalle #{i+1} requiere un precio unitario válido"
+        
+        # Todo válido
+        return True, ""
+    
+    def prepare_purchase_order_data(self, form_data):
+        """
+        Prepara los datos de un formulario para crear/actualizar una orden de compra.
+        
+        Args:
+            form_data: Diccionario con los datos del formulario
+            
+        Returns:
+            dict: Datos en formato frontend listos para enviar al backend
+        """
+        # Crear estructura base de la orden
+        order = {
+            "po_id": form_data.get("po_id"),
+            "supplier_id": form_data.get("supplier_id"),
+            "user_id": form_data.get("user_id", 1),  # Default a 1 si no se proporciona
+            "date": form_data.get("date"),
+            "expected_delivery": form_data.get("expected_delivery", form_data.get("delivery_date")),
+            "status": form_data.get("status", "pendiente"),
+            "details": []
+        }
+        
+        # Procesar detalles
+        details = form_data.get("details", [])
+        for detail in details:
+            # Calcular subtotal si no está presente
+            quantity = float(detail.get("quantity", 0))
+            unit_price = float(detail.get("unit_price", 0))
+            subtotal = detail.get("subtotal")
+            
+            if subtotal is None:
+                subtotal = quantity * unit_price
+            
+            # Añadir detalle procesado
+            order["details"].append({
+                "detail_id": detail.get("detail_id"),
+                "material_id": detail.get("material_id"),
+                "material_name": detail.get("material_name", ""),
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "subtotal": subtotal
+            })
+        
+        # Calcular total de la orden
+        order["total"] = self.calculate_order_total(order["details"])
+        
+        return order

@@ -20,3 +20,10 @@ class RecursosHumanosWindow(QMainWindow):
         self.tab_widget.addTab(WorkAreasListView(api_client), "Áreas de Trabajo")
         self.tab_widget.addTab(AttendanceListView(api_client), "Asistencia")
         self.tab_widget.addTab(PayrollListView(api_client), "Nóminas")
+
+    def center_window(self):
+        screen = self.screen().availableGeometry()
+        window_size = self.frameGeometry()
+        x = screen.center().x() - window_size.width() // 2
+        y = screen.center().y() - window_size.height() // 2
+        self.move(x, y)

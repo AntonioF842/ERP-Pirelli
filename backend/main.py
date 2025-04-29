@@ -10,6 +10,7 @@ from routes.providers import providers_bp
 from routes.materials import materials_bp
 from routes.inventory import inventory_bp
 from routes.purchase_orders import purchase_orders_bp
+from routes.purchase_orders_details import purchase_orders_details_bp
 from routes.production_orders import production_orders_bp
 from routes.production_recipes import production_recipes_bp
 from routes.work_areas import work_areas_bp
@@ -29,31 +30,38 @@ from flask_cors import CORS
 app = create_app()
 CORS(app)
 
-# Registrar blueprints
-app.register_blueprint(auth_bp, url_prefix='/api')
-app.register_blueprint(products_bp, url_prefix='/api')
-app.register_blueprint(ventas_bp, url_prefix='/api')
-app.register_blueprint(clients_bp, url_prefix='/api')
-app.register_blueprint(employees_bp, url_prefix='/api')
-app.register_blueprint(attendance_bp, url_prefix='/api')
-app.register_blueprint(providers_bp, url_prefix='/api')
-app.register_blueprint(materials_bp, url_prefix='/api')
-app.register_blueprint(inventory_bp, url_prefix='/api')
-app.register_blueprint(purchase_orders_bp, url_prefix='/api')
-app.register_blueprint(production_orders_bp, url_prefix='/api')
-app.register_blueprint(production_recipes_bp, url_prefix='/api')
-app.register_blueprint(work_areas_bp, url_prefix='/api')
-app.register_blueprint(suppliers_bp, url_prefix='/api')
-app.register_blueprint(quality_control_bp, url_prefix='/api')
-app.register_blueprint(payroll_bp, url_prefix='/api')
-app.register_blueprint(r_d_projects_bp, url_prefix='/api')
-app.register_blueprint(legal_regulations_bp, url_prefix='/api')
-app.register_blueprint(incidents_bp, url_prefix='/api')
-app.register_blueprint(production_assets_bp, url_prefix='/api')
-app.register_blueprint(maintenance_bp, url_prefix='/api')
-app.register_blueprint(system_configuration_bp, url_prefix='/api')
-app.register_blueprint(users_bp, url_prefix='/api')
-app.register_blueprint(dashboard_bp, url_prefix='/api')
+# Registrar blueprints mediante una lista para mejor organización
+blueprints = [
+    (auth_bp, '/api'),
+    (products_bp, '/api'),
+    (ventas_bp, '/api'),
+    (clients_bp, '/api'),
+    (employees_bp, '/api'),
+    (attendance_bp, '/api'),
+    (providers_bp, '/api'),
+    (materials_bp, '/api/materiales'),
+    (inventory_bp, '/api/inventario'),
+    (purchase_orders_bp, '/api/ordenes_compra'),
+    (purchase_orders_details_bp, '/api/ordenes_compra_detalle'),
+    (production_orders_bp, '/api'),
+    (production_recipes_bp, '/api'),
+    (work_areas_bp, '/api'),
+    (suppliers_bp, '/api/proveedores'),
+    (quality_control_bp, '/api'),
+    (payroll_bp, '/api'),
+    (r_d_projects_bp, '/api'),
+    (legal_regulations_bp, '/api'),
+    (incidents_bp, '/api'),
+    (production_assets_bp, '/api'),
+    (maintenance_bp, '/api'),
+    (system_configuration_bp, '/api'),
+    (users_bp, '/api'),
+    (dashboard_bp, '/api')
+]
+
+# Registrar cada blueprint con su prefijo correspondiente
+for blueprint, prefix in blueprints:
+    app.register_blueprint(blueprint, url_prefix=prefix)
 
 # Crear tablas en la base de datos
 with app.app_context():

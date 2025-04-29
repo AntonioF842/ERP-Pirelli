@@ -1,49 +1,78 @@
-from flask import Blueprint, jsonify, request
-from models import Material, db
+from flask import Blueprint, jsonify, request, abort
+from models import db, Material, Inventario
 
-materials_bp = Blueprint('materials', __name__)
+# ¡Corrige el prefijo aquí!
+materials_bp = Blueprint("materials", __name__, url_prefix="/api/materiales")
 
-@materials_bp.route('/materials', methods=['GET'])
+# GET /api/materiales - Listar todos los materiales
+@materials_bp.route("", methods=["GET"])
 def get_materials():
-    materials = Material.query.all()
-    return jsonify([{
-        'id_material': mat.id_material,
-        'nombre': mat.nombre,
-        'descripcion': mat.descripcion,
-        'unidad_medida': mat.unidad_medida,
-        'stock_minimo': mat.stock_minimo,
-        'stock_maximo': mat.stock_maximo
-    } for mat in materials])
+    materiales = Material.query.all()
+    result = [
+        {
+            "id_material": m.id_material,
+            "nombre": m.nombre,
+            "descripcion": m.descripcion,
+            "unidad_medida": m.unidad_medida,
+            "stock_minimo": m.stock_minimo,
+            "stock_maximo": m.stock_maximo
+        } for m in materiales
+    ]
+    return jsonify(result), 200
 
-@materials_bp.route('/materials', methods=['POST'])
+# GET /api/materiales/<id> - Obtener material puntual
+@materials_bp.route("/<int:material_id>", methods=["GET"])
+def get_material(material_id):
+    m = Material.query.get_or_404(material_id)
+    data = {
+        "id_material": m.id_material,
+        "nombre": m.nombre,
+        "descripcion": m.descripcion,
+        "unidad_medida": m.unidad_medida,
+        "stock_minimo": m.stock_minimo,
+        "stock_maximo": m.stock_maximo
+    }
+    return jsonify(data), 200
+
+# POST /api/materiales - Crear material
+@materials_bp.route("", methods=["POST"])
 def create_material():
-    data = request.get_json()
-    new_material = Material(
-        nombre=data['nombre'],
-        descripcion=data.get('descripcion'),
-        unidad_medida=data.get('unidad_medida'),
-        stock_minimo=data.get('stock_minimo'),
-        stock_maximo=data.get('stock_maximo')
+    data = request.json or {}
+    nombre = data.get("nombre")
+    if not nombre:
+        abort(400, "Nombre es obligatorio")
+    material = Material(
+        nombre=nombre,
+        descripcion=data.get("descripcion", ""),
+        unidad_medida=data.get("unidad_medida", ""),
+        stock_minimo=data.get("stock_minimo", 0),
+        stock_maximo=data.get("stock_maximo", 0)
     )
-    db.session.add(new_material)
+    db.session.add(material)
     db.session.commit()
-    return jsonify({'message': 'Material created successfully'}), 201
+    return jsonify({"id_material": material.id_material}), 201
 
-@materials_bp.route('/materials/<int:id>', methods=['PUT'])
-def update_material(id):
-    material = Material.query.get_or_404(id)
-    data = request.get_json()
-    material.nombre = data.get('nombre', material.nombre)
-    material.descripcion = data.get('descripcion', material.descripcion)
-    material.unidad_medida = data.get('unidad_medida', material.unidad_medida)
-    material.stock_minimo = data.get('stock_minimo', material.stock_minimo)
-    material.stock_maximo = data.get('stock_maximo', material.stock_maximo)
+# PUT /api/materiales/<id> - Editar material
+@materials_bp.route("/<int:material_id>", methods=["PUT"])
+def update_material(material_id):
+    m = Material.query.get_or_404(material_id)
+    data = request.json or {}
+    m.nombre = data.get("nombre", m.nombre)
+    m.descripcion = data.get("descripcion", m.descripcion)
+    m.unidad_medida = data.get("unidad_medida", m.unidad_medida)
+    m.stock_minimo = data.get("stock_minimo", m.stock_minimo)
+    m.stock_maximo = data.get("stock_maximo", m.stock_maximo)
     db.session.commit()
-    return jsonify({'message': 'Material updated successfully'})
+    return jsonify({"message": "Material actualizado"}), 200
 
-@materials_bp.route('/materials/<int:id>', methods=['DELETE'])
-def delete_material(id):
-    material = Material.query.get_or_404(id)
-    db.session.delete(material)
+# DELETE /api/materiales/<id> - Eliminar material
+@materials_bp.route("/<int:material_id>", methods=["DELETE"])
+def delete_material(material_id):
+    m = Material.query.get_or_404(material_id)
+    # Check for references in the inventory
+    inventario_refs = db.session.query(db.exists().where(Inventario.id_material == m.id_material)).scalar()
+    if inventario_refs:
+        return jsonify({"error": "No se puede eliminar el material porque está referenciado en inventario."}), 400
+    db.session.delete(m)
     db.session.commit()
-    return jsonify({'message': 'Material deleted successfully'})
+    return jsonify({"message": "Material eliminado"}), 200

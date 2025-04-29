@@ -3,7 +3,7 @@ from models import Proveedor, db
 
 suppliers_bp = Blueprint('suppliers', __name__)
 
-@suppliers_bp.route('/suppliers', methods=['GET'])
+@suppliers_bp.route('', methods=['GET'])
 def get_suppliers():
     suppliers = Proveedor.query.all()
     return jsonify([{
@@ -16,7 +16,7 @@ def get_suppliers():
         'tipo_material': sup.tipo_material
     } for sup in suppliers])
 
-@suppliers_bp.route('/suppliers', methods=['POST'])
+@suppliers_bp.route('', methods=['POST'])
 def create_supplier():
     data = request.get_json()
     new_supplier = Proveedor(
@@ -29,9 +29,9 @@ def create_supplier():
     )
     db.session.add(new_supplier)
     db.session.commit()
-    return jsonify({'message': 'Supplier created successfully'}), 201
+    return jsonify({'message': 'Proveedor creado exitosamente'}), 201
 
-@suppliers_bp.route('/suppliers/<int:id>', methods=['PUT'])
+@suppliers_bp.route('/<int:id>', methods=['PUT'])
 def update_supplier(id):
     supplier = Proveedor.query.get_or_404(id)
     data = request.get_json()
@@ -42,11 +42,11 @@ def update_supplier(id):
     supplier.direccion = data.get('direccion', supplier.direccion)
     supplier.tipo_material = data.get('tipo_material', supplier.tipo_material)
     db.session.commit()
-    return jsonify({'message': 'Supplier updated successfully'})
+    return jsonify({'message': 'Proveedor actualizado exitosamente'})
 
-@suppliers_bp.route('/suppliers/<int:id>', methods=['DELETE'])
+@suppliers_bp.route('/<int:id>', methods=['DELETE'])
 def delete_supplier(id):
     supplier = Proveedor.query.get_or_404(id)
     db.session.delete(supplier)
     db.session.commit()
-    return jsonify({'message': 'Supplier deleted successfully'})
+    return jsonify({'message': 'Proveedor eliminado exitosamente'})
