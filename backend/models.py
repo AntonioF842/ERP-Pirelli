@@ -147,6 +147,16 @@ class RecetaProduccion(db.Model):
     cantidad = db.Column(db.Numeric(10, 2), nullable=False)
     producto = db.relationship('Producto', backref='recetas')
     material = db.relationship('Material', backref='recetas')
+    
+    def to_dict(self):
+        return {
+            'id_receta': self.id_receta,
+            'id_producto': self.id_producto,
+            'producto_nombre': self.producto.nombre if self.producto else None,
+            'id_material': self.id_material,
+            'material_nombre': self.material.nombre if self.material else None,
+            'cantidad': float(self.cantidad) if self.cantidad else 0.0
+        }
 
 # Control de Calidad
 class ControlCalidad(db.Model):

@@ -5,7 +5,7 @@ from PyQt6.QtCore import pyqtSignal, Qt
 from views.dashboard_view import DashboardView
 from views.rrhh.rrhh_window import RecursosHumanosWindow
 from views.inventory.inventory_window import InventoryWindow
-# from views.produccion_window import ProduccionWindow
+from views.production.production_window import ProductionWindow
 # from views.ventas_window import VentasWindow
 # from views.gestion_window import GestionWindow
 
@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
 
         self.rrhh_window = None
         self.inventario_window = None
-        # self.produccion_window = None
+        self.production_window = None
         # self.ventas_window = None
         # self.gestion_window = None
 
@@ -71,6 +71,10 @@ class MainWindow(QMainWindow):
         inventario_action = QAction("Inventario y Compras", self)
         inventario_action.triggered.connect(lambda: self.open_module_window('inventario_window', InventoryWindow))
         modules_menu.addAction(inventario_action)
+
+        production_action = QAction("Producción", self)
+        production_action.triggered.connect(lambda: self.open_module_window('production_window', ProductionWindow))
+        modules_menu.addAction(production_action)
 
         # ... Agregar más módulos aquí
 
@@ -140,6 +144,8 @@ class MainWindow(QMainWindow):
                 self.rrhh_window.close()
             if self.inventario_window is not None:
                 self.inventario_window.close()
+            if self.production_window is not None:
+                self.production_window.close()
             # Agrega aquí más módulos si tienes otros
             event.accept()
         else:

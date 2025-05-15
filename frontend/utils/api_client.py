@@ -1609,3 +1609,422 @@ class ApiClient(QObject):
         order["total"] = self.calculate_order_total(order["details"])
         
         return order
+
+    # --- ÓRDENES DE PRODUCCIÓN (CRUD) ---
+    def get_production_orders(self):
+        """Obtiene la lista de órdenes de producción"""
+        try:
+            response = self.session.get(f"{self.base_url}/ordenes_produccion")
+            if response.status_code == 200:
+                data = response.json()
+                # Enriquecer datos con nombres de producto y usuario
+                for order in data:
+                    if "producto" in order and isinstance(order["producto"], dict):
+                        order["producto_nombre"] = order["producto"].get("nombre", "Producto")
+                    if "usuario" in order and isinstance(order["usuario"], dict):
+                        order["usuario_nombre"] = order["usuario"].get("nombre", "Usuario")
+                self.data_received.emit({"type": "production_orders", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener órdenes de producción: {str(e)}")
+            return []
+
+    def get_production_order(self, order_id):
+        """Obtiene una orden de producción por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/ordenes_produccion/{order_id}")
+            if response.status_code == 200:
+                order = response.json()
+                # Enriquecer datos para la vista
+                if "producto" in order and isinstance(order["producto"], dict):
+                    order["producto_nombre"] = order["producto"].get("nombre", "Producto")
+                if "usuario" in order and isinstance(order["usuario"], dict):
+                    order["usuario_nombre"] = order["usuario"].get("nombre", "Usuario")
+                return order
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener orden de producción: {str(e)}")
+            return None
+
+    def create_production_order(self, order_data):
+        """Crea una nueva orden de producción"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/ordenes_produccion",
+                json=order_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_production_order", result)
+                self.data_received.emit({"type": "production_order_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear orden de producción: {str(e)}")
+            return None
+
+    def update_production_order(self, order_id, order_data):
+        """Actualiza una orden de producción existente (PUT /ordenes_produccion/<id>)"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/ordenes_produccion/{order_id}",
+                json=order_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_production_order", result)
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar orden de producción: {str(e)}")
+            return None
+
+    def delete_production_order(self, order_id):
+        """Elimina una orden de producción"""
+        try:
+            response = self.session.delete(f"{self.base_url}/ordenes_produccion/{order_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_production_order", result)
+                self.data_received.emit({"type": "production_order_deleted", "data": {"id": order_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar orden de producción: {str(e)}")
+            return None 
+        
+        # --- PRODUCTION RECIPES (CRUD) ---
+    def get_production_recipes(self):
+        """Obtiene la lista de recetas de producción"""
+        try:
+            response = self.session.get(f"{self.base_url}/production_recipes")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "production_recipes", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener recetas de producción: {str(e)}")
+            return []
+        
+    def get_products(self):
+        """Obtiene la lista de productos"""
+        try:
+            response = self.session.get(f"{self.base_url}/products")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "products", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener productos: {str(e)}")
+            return []
+
+    def get_materials(self):
+        """Obtiene la lista de materiales"""
+        try:
+            response = self.session.get(f"{self.base_url}/materials")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "materials", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener materiales: {str(e)}")
+            return []
+
+    def get_production_recipe(self, recipe_id):
+        """Obtiene una receta de producción por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/production_recipes/{recipe_id}")
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener receta de producción: {str(e)}")
+            return None
+
+    def create_production_recipe(self, recipe_data):
+        """Crea una nueva receta de producción"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/production_recipes",
+                json=recipe_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_production_recipe", result)
+                self.data_received.emit({"type": "production_recipe_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear receta de producción: {str(e)}")
+            return None
+
+    def update_production_recipe(self, recipe_id, recipe_data):
+        """Actualiza una receta de producción existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/production_recipes/{recipe_id}",
+                json=recipe_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_production_recipe", result)
+                self.data_received.emit({"type": "production_recipe_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar receta de producción: {str(e)}")
+            return None
+
+    def delete_production_recipe(self, recipe_id):
+        """Elimina una receta de producción"""
+        try:
+            response = self.session.delete(f"{self.base_url}/production_recipes/{recipe_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_production_recipe", result)
+                self.data_received.emit({"type": "production_recipe_deleted", "data": {"id": recipe_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar receta de producción: {str(e)}")
+            return None
+        
+    # --- CONTROL DE CALIDAD (CRUD) ---
+    def get_quality_controls(self):
+        """Obtiene la lista de controles de calidad"""
+        try:
+            response = self.session.get(f"{self.base_url}/quality_control")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "quality_controls", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener controles de calidad: {str(e)}")
+            return []
+
+    def get_quality_control(self, control_id):
+        """Obtiene un control de calidad por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/quality_control/{control_id}")
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener control de calidad: {str(e)}")
+            return None
+
+    def create_quality_control(self, control_data):
+        """Crea un nuevo control de calidad"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/quality_control",
+                json=control_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_quality_control", result)
+                self.data_received.emit({"type": "quality_control_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear control de calidad: {str(e)}")
+            return None
+
+    def update_quality_control(self, control_id, control_data):
+        """Actualiza un control de calidad existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/quality_control/{control_id}",
+                json=control_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_quality_control", result)
+                self.data_received.emit({"type": "quality_control_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar control de calidad: {str(e)}")
+            return None
+
+    def delete_quality_control(self, control_id):
+        """Elimina un control de calidad"""
+        try:
+            response = self.session.delete(f"{self.base_url}/quality_control/{control_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_quality_control", result)
+                self.data_received.emit({"type": "quality_control_deleted", "data": {"id": control_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar control de calidad: {str(e)}")
+            return None
+        
+    # --- PRODUCTION ASSETS (CRUD) ---
+    def get_production_assets(self):
+        """Obtiene la lista de activos de producción"""
+        try:
+            response = self.session.get(f"{self.base_url}/production_assets")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "production_assets", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener activos de producción: {str(e)}")
+            return []
+
+    def get_production_asset(self, asset_id):
+        """Obtiene un activo de producción por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/production_assets/{asset_id}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                self.request_error.emit(f"Error al obtener activo de producción: Status {response.status_code}")
+                return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener activo de producción: {str(e)}")
+            return None
+
+
+    def create_production_asset(self, asset_data):
+        """Crea un nuevo activo de producción"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/production_assets",
+                json=asset_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_production_asset", result)
+                self.data_received.emit({"type": "asset_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear activo de producción: {str(e)}")
+            return None
+
+    def update_production_asset(self, asset_id, asset_data):
+        """Actualiza un activo de producción existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/production_assets/{asset_id}",
+                json=asset_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_production_asset", result)
+                self.data_received.emit({"type": "asset_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar activo de producción: {str(e)}")
+            return None
+
+    def delete_production_asset(self, asset_id):
+        """Elimina un activo de producción"""
+        try:
+            response = self.session.delete(f"{self.base_url}/production_assets/{asset_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_production_asset", result)
+                self.data_received.emit({"type": "asset_deleted", "data": {"id": asset_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar activo de producción: {str(e)}")
+            return None
+        
+    # --- MANTENIMIENTO (CRUD) ---
+    def get_maintenance(self):
+        """Obtiene la lista de registros de mantenimiento"""
+        try:
+            response = self.session.get(f"{self.base_url}/maintenance")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "maintenance", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener registros de mantenimiento: {str(e)}")
+            return []
+
+    def get_maintenance_record(self, record_id):
+        """Obtiene un registro de mantenimiento por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/maintenance/{record_id}")
+            if response.status_code == 200:
+                record = response.json()
+                # Enriquecer datos para la vista si es necesario
+                return record
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener registro de mantenimiento: {str(e)}")
+            return None
+
+    def create_maintenance(self, maintenance_data):
+        """Crea un nuevo registro de mantenimiento"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/maintenance",
+                json=maintenance_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_maintenance", result)
+                self.data_received.emit({"type": "maintenance_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear registro de mantenimiento: {str(e)}")
+            return None
+
+    def update_maintenance(self, record_id, maintenance_data):
+        """Actualiza un registro de mantenimiento existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/maintenance/{record_id}",
+                json=maintenance_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_maintenance", result)
+                self.data_received.emit({"type": "maintenance_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar registro de mantenimiento: {str(e)}")
+            return None
+
+    def delete_maintenance(self, record_id):
+        """Elimina un registro de mantenimiento"""
+        try:
+            response = self.session.delete(f"{self.base_url}/maintenance/{record_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_maintenance", result)
+                self.data_received.emit({"type": "maintenance_deleted", "data": {"id": record_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar registro de mantenimiento: {str(e)}")
+            return None
+    
+    # --- MÉTODOS AUXILIARES PARA MANTENIMIENTO ---
+    def get_production_assets(self):
+        """Obtiene la lista de activos de producción"""
+        try:
+            response = self.session.get(f"{self.base_url}/production_assets")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "production_assets", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener activos de producción: {str(e)}")
+            return []
+
+    def get_employees(self):
+        """Obtiene la lista de empleados"""
+        try:
+            response = self.session.get(f"{self.base_url}/employees")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "employees", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener empleados: {str(e)}")
+            return []

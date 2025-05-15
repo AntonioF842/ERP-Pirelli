@@ -1,10 +1,12 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request, jsonify
+from flask_login import login_required
 from models import ControlCalidad, OrdenProduccion, Usuario, db
 from datetime import datetime
 
-quality_control_bp = Blueprint('quality_control', __name__)
+quality_control_bp = Blueprint('quality_control_bp', __name__)
 
 @quality_control_bp.route('/quality_control', methods=['GET'])
+@login_required
 def get_quality_controls():
     controls = ControlCalidad.query.all()
     return jsonify([{
@@ -19,6 +21,7 @@ def get_quality_controls():
     } for control in controls])
 
 @quality_control_bp.route('/quality_control', methods=['POST'])
+@login_required
 def create_quality_control():
     data = request.get_json()
     new_control = ControlCalidad(
@@ -33,6 +36,7 @@ def create_quality_control():
     return jsonify({'message': 'Quality control record created successfully'}), 201
 
 @quality_control_bp.route('/quality_control/<int:id>', methods=['PUT'])
+@login_required
 def update_quality_control(id):
     control = ControlCalidad.query.get_or_404(id)
     data = request.get_json()
@@ -46,6 +50,7 @@ def update_quality_control(id):
     return jsonify({'message': 'Quality control record updated successfully'})
 
 @quality_control_bp.route('/quality_control/<int:id>', methods=['DELETE'])
+@login_required
 def delete_quality_control(id):
     control = ControlCalidad.query.get_or_404(id)
     db.session.delete(control)
