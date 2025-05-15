@@ -6,7 +6,7 @@ from views.dashboard_view import DashboardView
 from views.rrhh.rrhh_window import RecursosHumanosWindow
 from views.inventory.inventory_window import InventoryWindow
 from views.production.production_window import ProductionWindow
-# from views.ventas_window import VentasWindow
+from views.sales.sales_window import VentasWindow
 # from views.gestion_window import GestionWindow
 
 class MainWindow(QMainWindow):
@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
         self.rrhh_window = None
         self.inventario_window = None
         self.production_window = None
-        # self.ventas_window = None
+        self.ventas_window = None
         # self.gestion_window = None
 
         self.init_ui()
@@ -75,6 +75,10 @@ class MainWindow(QMainWindow):
         production_action = QAction("Producción", self)
         production_action.triggered.connect(lambda: self.open_module_window('production_window', ProductionWindow))
         modules_menu.addAction(production_action)
+
+        ventas_action = QAction("Ventas", self)
+        ventas_action.triggered.connect(lambda: self.open_module_window('ventas_window', VentasWindow))
+        modules_menu.addAction(ventas_action)
 
         # ... Agregar más módulos aquí
 
@@ -146,6 +150,8 @@ class MainWindow(QMainWindow):
                 self.inventario_window.close()
             if self.production_window is not None:
                 self.production_window.close()
+            if self.ventas_window is not None:
+                self.ventas_window.close()
             # Agrega aquí más módulos si tienes otros
             event.accept()
         else:
