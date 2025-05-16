@@ -882,3 +882,235 @@ class DashboardView(QWidget):
 
     def show_error_message(self, title, message):
         QMessageBox.critical(self, title, message)
+
+    # Añadir estas clases al archivo existente
+
+class AttendancePieChart(ChartCard):
+    """Gráfico de pastel para mostrar asistencias"""
+    def __init__(self):
+        super().__init__("Asistencia del Mes", "pie")
+        
+    def update_data(self, data):
+        series = QPieSeries()
+        present = data.get("presente", 0)
+        absent = data.get("ausente", 0)
+        late = data.get("tardanza", 0)
+        
+        if present > 0:
+            slice = series.append("Presentes", present)
+            slice.setColor(QColor("#4CAF50"))  # Verde
+            slice.setLabelVisible(True)
+        
+        if absent > 0:
+            slice = series.append("Ausentes", absent)
+            slice.setColor(QColor("#F44336"))  # Rojo
+        
+        if late > 0:
+            slice = series.append("Tardanzas", late)
+            slice.setColor(QColor("#FFC107"))  # Amarillo
+        
+        self.chart.removeAllSeries()
+        self.chart.addSeries(series)
+        self.chart.setTitle("Asistencia del Mes")
+
+class TopProductsChart(ChartCard):
+    """Gráfico de barras para productos más vendidos"""
+    def __init__(self):
+        super().__init__("Productos Más Vendidos", "bar")
+        
+    def update_data(self, data):
+        self.chart.removeAllSeries()
+        
+        if not data:
+            return
+            
+        set0 = QBarSet("Ventas")
+        set0.setColor(QColor(PIRELLI_RED))
+        
+        categories = []
+        for product in data:
+            set0.append(product["cantidad"])
+            categories.append(product["nombre"][:15] + "..." if len(product["nombre"]) > 15 else product["nombre"])
+        
+        series = QBarSeries()
+        series.append(set0)
+        self.chart.addSeries(series)
+        
+        axis_x = QBarCategoryAxis()
+        axis_x.append(categories)
+        self.chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+        series.attachAxis(axis_x)
+
+        axis_y = QValueAxis()
+        max_value = max([p["cantidad"] for p in data]) if data else 10
+        axis_y.setRange(0, max_value * 1.1)
+        axis_y.setLabelsFont(QFont("Segoe UI", 8))
+        self.chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+        series.attachAxis(axis_y)
+        
+        self.chart.setTitle("Productos Más Vendidos")
+
+class AssetsStatusChart(ChartCard):
+    """Gráfico de estado de activos"""
+    def __init__(self):
+        super().__init__("Estado de Activos", "pie")
+        
+    def update_data(self, data):
+        series = QPieSeries()
+        
+        for item in data:
+            estado = item["estado"]
+            cantidad = item["cantidad"]
+            
+            if cantidad > 0:
+                slice = series.append(estado.capitalize(), cantidad)
+                
+                # Asignar colores según estado
+                if estado == "operativo":
+                    slice.setColor(QColor("#4CAF50"))  # Verde
+                elif estado == "mantenimiento":
+                    slice.setColor(QColor("#FF9800"))  # Naranja
+                else:  # baja
+                    slice.setColor(QColor("#F44336"))  # Rojo
+                
+                if estado == "operativo":
+                    slice.setLabelVisible(True)
+        
+        self.chart.removeAllSeries()
+        self.chart.addSeries(series)
+        self.chart.setTitle("Estado de Activos")
+
+class IncidentsTable(QTableWidget):
+    """Tabla para mostrar incidentes recientes"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setColumnCount(4)
+        self.setHorizontalHeaderLabels(["ID", "Tipo", "Fecha", "Estado"])
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.verticalHeader().setVisible(False)
+        self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        self.setStyleSheet("""
+            QTableWidget {
+                background-color: #FAFAFA;
+                font-family: 'Segoe UI';
+                font-size: 13px;
+                border: none;
+            }
+            QHeaderView::section {
+                background-color: #1A1A1A;
+                color: white;
+                font-weight: bold;
+                font-size: 13px;
+                border: none;
+                padding: 6px;
+            }
+        """)
+        
+    def load_data(self, incidents):
+        self.setRowCount(len(incidents))
+        for row, incident in enumerate(incidents):
+            self.setItem(row, 0, QTableWidgetItem(str(incident.get("id", ""))))
+            self.setItem(row, 1, QTableWidgetItem(incident.get("tipo", "").capitalize()))
+            self.setItem(row, 2, QTableWidgetItem(incident.get("fecha", "")))
+            
+            status_item = QTableWidgetItem(incident.get("estado", "").capitalize())
+            if incident.get("estado") == "resuelto":
+                status_item.setForeground(QColor("#4CAF50"))
+            elif incident.get("estado") == "investigacion":
+                status_item.setForeground(QColor("#FFC107"))
+            else:  # reportado
+                status_item.setForeground(QColor("#F44336"))
+            self.setItem(row, 3, status_item)
+
+# Luego, en la clase DashboardView, actualizar el método init_ui para añadir las nuevas secciones:
+
+def init_ui(self):
+    # ... (código existente hasta create_recent_activities)
+    
+    # Añadir estas líneas después de create_recent_activities
+    
+    # Sección de Personal y Asistencia
+    personal_title = QLabel("Gestión de Personal")
+    personal_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 20px; font-weight: bold; margin-top: 18px; margin-bottom: 8px;")
+    self.main_layout.addWidget(personal_title)
+    
+    personal_layout = QHBoxLayout()
+    personal_layout.setSpacing(22)
+    
+    self.attendance_chart = AttendancePieChart()
+    personal_layout.addWidget(self.attendance_chart)
+    
+    # Tarjeta de órdenes de compra pendientes
+    self.pending_orders_card = StatisticCard(
+        "Órdenes Compra Pendientes",
+        "0",
+        "resources/icons/purchase.png",
+        PIRELLI_YELLOW
+    )
+    personal_layout.addWidget(self.pending_orders_card)
+    
+    self.main_layout.addLayout(personal_layout)
+    
+    # Sección de Productos y Ventas
+    products_title = QLabel("Productos y Ventas")
+    products_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 20px; font-weight: bold; margin-top: 18px; margin-bottom: 8px;")
+    self.main_layout.addWidget(products_title)
+    
+    products_layout = QHBoxLayout()
+    products_layout.setSpacing(22)
+    
+    self.top_products_chart = TopProductsChart()
+    products_layout.addWidget(self.top_products_chart)
+    
+    self.main_layout.addLayout(products_layout)
+    
+    # Sección de Activos e Incidentes
+    assets_title = QLabel("Activos e Incidentes")
+    assets_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 20px; font-weight: bold; margin-top: 18px; margin-bottom: 8px;")
+    self.main_layout.addWidget(assets_title)
+    
+    assets_layout = QVBoxLayout()
+    
+    # Gráfico de estado de activos
+    assets_chart_layout = QHBoxLayout()
+    self.assets_chart = AssetsStatusChart()
+    assets_chart_layout.addWidget(self.assets_chart)
+    assets_layout.addLayout(assets_chart_layout)
+    
+    # Tabla de incidentes
+    incidents_label = QLabel("Incidentes Recientes")
+    incidents_label.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 16px; font-weight: bold; margin-top: 12px;")
+    assets_layout.addWidget(incidents_label)
+    
+    self.incidents_table = IncidentsTable()
+    assets_layout.addWidget(self.incidents_table)
+    
+    self.main_layout.addLayout(assets_layout)
+
+# Finalmente, actualizar el método update_data para cargar la nueva información:
+
+def update_data(self, data):
+    # ... (código existente hasta el final del método)
+    
+    try:
+        # Actualizar los nuevos componentes
+        if 'asistencias_data' in data:
+            self.attendance_chart.update_data(data['asistencias_data'])
+            
+        if 'productos_mas_vendidos' in data:
+            self.top_products_chart.update_data(data['productos_mas_vendidos'])
+            
+        if 'activos_estado' in data:
+            self.assets_chart.update_data(data['activos_estado'])
+            
+        if 'ordenes_compra_pendientes' in data:
+            self.pending_orders_card.findChild(QLabel, "value_label").setText(
+                str(data['ordenes_compra_pendientes'])
+            )
+            
+        if 'incidentes_recientes' in data:
+            self.incidents_table.load_data(data['incidentes_recientes'])
+            
+    except Exception as e:
+        logging.exception("Error al actualizar los nuevos componentes del dashboard")

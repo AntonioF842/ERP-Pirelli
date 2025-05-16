@@ -2028,3 +2028,363 @@ class ApiClient(QObject):
         except Exception as e:
             self.request_error.emit(f"Error al obtener empleados: {str(e)}")
             return []
+        
+    # --- PROYECTOS I+D (CRUD) ---
+    def get_r_d_projects(self):
+        """Obtiene la lista de proyectos de I+D"""
+        try:
+            response = self.session.get(f"{self.base_url}/r_d_projects")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "r_d_projects", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener proyectos I+D: {str(e)}")
+            return []
+
+    def get_r_d_project(self, project_id):
+        """Obtiene un proyecto de I+D por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/r_d_projects/{project_id}")
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener proyecto I+D: {str(e)}")
+            return None
+
+    def create_r_d_project(self, project_data):
+        try:
+            response = self.session.post(
+                f"{self.base_url}/r_d_projects",
+                json=project_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_r_d_project", result)
+                self.data_received.emit({"type": "r_d_project_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear proyecto I+D: {str(e)}")
+            return None
+
+    def update_r_d_project(self, project_id, project_data):
+        try:
+            response = self.session.put(
+                f"{self.base_url}/r_d_projects/{project_id}",
+                json=project_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_r_d_project", result)
+                self.data_received.emit({"type": "r_d_project_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar proyecto I+D: {str(e)}")
+            return None
+
+    def delete_r_d_project(self, project_id):
+        try:
+            response = self.session.delete(f"{self.base_url}/r_d_projects/{project_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_r_d_project", result)
+                self.data_received.emit({"type": "r_d_project_deleted", "data": {"id": project_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar proyecto I+D: {str(e)}")
+            return None
+    
+    # --- NORMATIVAS LEGALES (CRUD) ---
+    def get_legal_regulations(self):
+        """Obtiene la lista de normativas legales"""
+        try:
+            response = self.session.get(f"{self.base_url}/legal_regulations")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "legal_regulations", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener normativas legales: {str(e)}")
+            return []
+
+    def get_legal_regulation(self, regulation_id):
+        """Obtiene una normativa legal por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/legal_regulations/{regulation_id}")
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener normativa legal: {str(e)}")
+            return None
+
+    def create_legal_regulation(self, regulation_data):
+        """Crea una nueva normativa legal"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/legal_regulations",
+                json=regulation_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_legal_regulation", result)
+                self.data_received.emit({"type": "legal_regulation_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear normativa legal: {str(e)}")
+            return None
+
+    def update_legal_regulation(self, regulation_id, regulation_data):
+        """Actualiza una normativa legal existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/legal_regulations/{regulation_id}",
+                json=regulation_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_legal_regulation", result)
+                self.data_received.emit({"type": "legal_regulation_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar normativa legal: {str(e)}")
+            return None
+
+    def delete_legal_regulation(self, regulation_id):
+        """Elimina una normativa legal"""
+        try:
+            response = self.session.delete(f"{self.base_url}/legal_regulations/{regulation_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_legal_regulation", result)
+                self.data_received.emit({"type": "legal_regulation_deleted", "data": {"id": regulation_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar normativa legal: {str(e)}")
+            return None
+        
+    # --- INCIDENTES (CRUD) ---
+    def get_incidents(self):
+        """Obtiene la lista de incidentes"""
+        try:
+            response = self.session.get(f"{self.base_url}/incidents")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "incidents", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener incidentes: {str(e)}")
+            return []
+
+    def get_incident(self, incident_id):
+        """Obtiene un incidente por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/incidents/{incident_id}")
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener incidente: {str(e)}")
+            return None
+
+    def create_incident(self, incident_data):
+        """Crea un nuevo incidente"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/incidents",
+                json=incident_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_incident", result)
+                self.data_received.emit({"type": "incident_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear incidente: {str(e)}")
+            return None
+
+    def update_incident(self, incident_id, incident_data):
+        """Actualiza un incidente existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/incidents/{incident_id}",
+                json=incident_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_incident", result)
+                self.data_received.emit({"type": "incident_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar incidente: {str(e)}")
+            return None
+
+    def delete_incident(self, incident_id):
+        """Elimina un incidente"""
+        try:
+            response = self.session.delete(f"{self.base_url}/incidents/{incident_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_incident", result)
+                self.data_received.emit({"type": "incident_deleted", "data": {"id": incident_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar incidente: {str(e)}")
+            return None
+        
+     # --- SYSTEM CONFIGURATION (CRUD) ---
+    def get_system_configurations(self):
+        """Obtiene la lista de configuraciones del sistema"""
+        try:
+            response = self.session.get(f"{self.base_url}/system_configuration")
+            if response.status_code == 200:
+                data = response.json()
+                self.data_received.emit({"type": "system_configurations", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener configuraciones del sistema: {str(e)}")
+            return []
+
+    def get_system_configuration(self, config_id):
+        """Obtiene una configuración por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/system_configuration/{config_id}")
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener configuración: {str(e)}")
+            return None
+
+    def create_system_configuration(self, config_data):
+        """Crea una nueva configuración del sistema"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/system_configuration",
+                json=config_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_system_configuration", result)
+                self.data_received.emit({"type": "configuration_created", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear configuración: {str(e)}")
+            return None
+
+    def update_system_configuration(self, config_id, config_data):
+        """Actualiza una configuración existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/system_configuration/{config_id}",
+                json=config_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_system_configuration", result)
+                self.data_received.emit({"type": "configuration_updated", "data": result})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar configuración: {str(e)}")
+            return None
+
+    def delete_system_configuration(self, config_id):
+        """Elimina una configuración"""
+        try:
+            response = self.session.delete(f"{self.base_url}/system_configuration/{config_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_system_configuration", result)
+                self.data_received.emit({"type": "configuration_deleted", "data": {"id": config_id}})
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar configuración: {str(e)}")
+            return None
+        
+    # --- SALES DETAILS (CRUD) ---
+    def get_sales_details(self, params=None):
+        """Obtiene la lista de detalles de venta"""
+        try:
+            response = self.session.get(f"{self.base_url}/sales-details", params=params)
+            if response.status_code == 200:
+                data = response.json()
+                # Enriquecer datos para la vista
+                for d in data:
+                    if "producto" in d and isinstance(d["producto"], dict):
+                        d["producto_nombre"] = d["producto"].get("nombre", "Producto")
+                        d["producto_codigo"] = d["producto"].get("codigo", "")
+                    if "venta" in d and isinstance(d["venta"], dict):
+                        d["venta_fecha"] = d["venta"].get("fecha", "")
+                self.data_received.emit({"type": "sales_details", "data": data})
+                return data
+            return []
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener detalles de venta: {str(e)}")
+            return []
+
+    def get_sales_detail(self, detail_id):
+        """Obtiene un detalle de venta por su ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/sales-details/{detail_id}")
+            if response.status_code == 200:
+                d = response.json()
+                # Enriquecer datos para la vista
+                if "producto" in d and isinstance(d["producto"], dict):
+                    d["producto_nombre"] = d["producto"].get("nombre", "Producto")
+                    d["producto_codigo"] = d["producto"].get("codigo", "")
+                    d["producto_categoria"] = d["producto"].get("categoria", "")
+                if "venta" in d and isinstance(d["venta"], dict):
+                    d["venta_fecha"] = d["venta"].get("fecha", "")
+                    d["venta_estado"] = d["venta"].get("estado", "")
+                return d
+            return None
+        except Exception as e:
+            self.request_error.emit(f"Error al obtener detalle de venta: {str(e)}")
+            return None
+
+    def create_sales_detail(self, detail_data):
+        """Crea un nuevo detalle de venta"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/sales-details",
+                json=detail_data
+            )
+            result = response.json() if response.status_code in [200, 201] else None
+            if result:
+                self.request_success.emit("create_sales_detail", result)
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al crear detalle de venta: {str(e)}")
+            return None
+
+    def update_sales_detail(self, detail_id, detail_data):
+        """Actualiza un detalle de venta existente"""
+        try:
+            response = self.session.put(
+                f"{self.base_url}/sales-details/{detail_id}",
+                json=detail_data
+            )
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("update_sales_detail", result)
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al actualizar detalle de venta: {str(e)}")
+            return None
+
+    def delete_sales_detail(self, detail_id):
+        """Elimina un detalle de venta"""
+        try:
+            response = self.session.delete(f"{self.base_url}/sales-details/{detail_id}")
+            result = response.json() if response.status_code == 200 else None
+            if result:
+                self.request_success.emit("delete_sales_detail", result)
+            return result
+        except Exception as e:
+            self.request_error.emit(f"Error al eliminar detalle de venta: {str(e)}")
+            return None
