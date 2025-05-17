@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from views.main_window import MainWindow
 from views.login_view import LoginView
 from utils.api_client import ApiClient
+from utils.theme import Theme
 
 class ERP_Pirelli(QApplication):
     """Aplicación principal del ERP de Pirelli"""
@@ -55,4 +56,5 @@ class ERP_Pirelli(QApplication):
 if __name__ == "__main__":
     # Iniciar la aplicación (sin configurar atributos de high DPI - ya están habilitados por defecto)
     app = ERP_Pirelli(sys.argv)
+    Theme.apply_window_light_theme(app)
     sys.exit(app.exec())
