@@ -329,14 +329,12 @@ class ClientListView(QWidget):
         delete_action = QAction(QIcon("resources/icons/delete.png"), "Eliminar", self)
         # Extra
         sales_action = QAction(QIcon("resources/icons/sales.png"), "Historial de compras", self)
-        contact_action = QAction(QIcon("resources/icons/contact.png"), "Contactar", self)
         notes_action = QAction(QIcon("resources/icons/notes.png"), "Agregar nota", self)
 
         context_menu.addAction(view_action)
         context_menu.addAction(edit_action)
         context_menu.addSeparator()
         context_menu.addAction(sales_action)
-        context_menu.addAction(contact_action)
         context_menu.addAction(notes_action)
         context_menu.addSeparator()
         context_menu.addAction(delete_action)
@@ -349,7 +347,6 @@ class ClientListView(QWidget):
         edit_action.triggered.connect(lambda: self.on_edit_client(client_id))
         delete_action.triggered.connect(lambda: self.on_delete_client(client_id))
         sales_action.triggered.connect(lambda: self.status_bar.showMessage(f"Mostrando historial de compras del cliente ID: {client_id}"))
-        contact_action.triggered.connect(lambda: self.status_bar.showMessage(f"Contactando al cliente ID: {client_id}"))
         notes_action.triggered.connect(lambda: self.status_bar.showMessage(f"Agregando nota al cliente ID: {client_id}"))
 
         context_menu.exec(self.client_table.viewport().mapToGlobal(position))

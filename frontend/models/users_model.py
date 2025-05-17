@@ -1,3 +1,4 @@
+# users_model.py
 class UsersModel:
     """
     Modelo para gestionar los datos de usuarios a través del api_client.

@@ -9,7 +9,7 @@ class GestionWindow(QMainWindow):
     def __init__(self, api_client):
         super().__init__()
         self.setWindowTitle("Gestión de Clientes")
-        self.setGeometry(100, 100, 800, 600)
+        self.setMinimumSize(900, 600)
         self.tab_widget = QTabWidget(self)
         self.setCentralWidget(self.tab_widget)
 

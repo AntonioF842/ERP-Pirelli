@@ -5,6 +5,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QIcon
 from controllers.users_controller import UsersController
+from views.rrhh.users.users_form import UserFormDialog
+from views.rrhh.users.users_detail import UserDetailDialog
+
 
 class UsersListView(QWidget):
     """
@@ -130,95 +133,58 @@ class UsersListView(QWidget):
             self.table.setCellWidget(row_idx, 4, action_widget)
 
     def view_user_details(self, user):
-        """Muestra los detalles de un usuario"""
-        # Aquí se implementaría la vista de detalles
-        QMessageBox.information(self, "Detalles de Usuario", 
-                               f"Detalles del usuario: {user.get('nombre', '')}")
-        
+        """Muestra los detalles de un usuario en un diálogo"""
+        user_id = user.get('id_usuario')
+        user_data = self.controller.fetch_user_detail(user_id)
+        if user_data:
+            dialog = UserDetailDialog(user_data, self)
+            dialog.exec()
+        else:
+            self.show_error("No se pudieron cargar los detalles del usuario")
+
     def add_user_dialog(self):
         """Abre un diálogo para agregar un nuevo usuario"""
-        class UserFormDialog(QDialog):
-            def __init__(self):
-                super().__init__()
-                self.setWindowTitle("Agregar Usuario")
-                self.layout = QFormLayout(self)
-                self.name = QLineEdit()
-                self.email = QLineEdit()
-                self.role = QLineEdit()
-                self.password = QLineEdit()
-                self.password.setEchoMode(QLineEdit.EchoMode.Password)
-                self.layout.addRow("Nombre:", self.name)
-                self.layout.addRow("Email:", self.email)
-                self.layout.addRow("Rol:", self.role)
-                self.layout.addRow("Password:", self.password)
-                self.buttons = QDialogButtonBox(
-                    QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-                )
-                self.buttons.accepted.connect(self.accept)
-                self.buttons.rejected.connect(self.reject)
-                self.layout.addWidget(self.buttons)
-
-            def get_data(self):
-                return {
-                    "nombre": self.name.text().strip(),
-                    "email": self.email.text().strip(),
-                    "rol": self.role.text().strip(),
-                    "password": self.password.text().strip()
-                }
-
-        dialog = UserFormDialog()
+        dialog = UserFormDialog(parent=self)
         if dialog.exec():
             data = dialog.get_data()
-            if not data["nombre"] or not data["email"] or not data["rol"] or not data["password"]:
-                QMessageBox.warning(self, "Error", "Todos los campos son obligatorios.")
+            if not all([data["nombre"], data["email"], data["rol"]]):
+                self.show_error("Todos los campos son obligatorios")
                 return
-            msg = self.controller.add_user(data)
-            QMessageBox.information(self, "Usuario agregado", 
-                                   "Usuario creado con éxito." if msg else "Error al crear usuario.")
-            self.refresh_data()
             
+            if 'password' not in data:
+                self.show_error("Se requiere una contraseña para nuevos usuarios")
+                return
+                
+            try:
+                result = self.controller.add_user(data)
+                if result:
+                    self.refresh_data()
+                    QMessageBox.information(self, "Éxito", "Usuario creado correctamente")
+                else:
+                    self.show_error("Error al crear el usuario")
+            except Exception as e:
+                self.show_error(str(e))
+                
     def edit_user_dialog(self, user):
         """Abre un diálogo para editar un usuario existente"""
-        class UserEditDialog(QDialog):
-            def __init__(self, user):
-                super().__init__()
-                self.setWindowTitle("Editar Usuario")
-                self.layout = QFormLayout(self)
-                self.name = QLineEdit()
-                self.name.setText(user.get("nombre", ""))
-                self.email = QLineEdit()
-                self.email.setText(user.get("email", ""))
-                self.role = QLineEdit()
-                self.role.setText(user.get("rol", ""))
-                self.layout.addRow("Nombre:", self.name)
-                self.layout.addRow("Email:", self.email)
-                self.layout.addRow("Rol:", self.role)
-                self.buttons = QDialogButtonBox(
-                    QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-                )
-                self.buttons.accepted.connect(self.accept)
-                self.buttons.rejected.connect(self.reject)
-                self.layout.addWidget(self.buttons)
-
-            def get_data(self):
-                return {
-                    "nombre": self.name.text().strip(),
-                    "email": self.email.text().strip(),
-                    "rol": self.role.text().strip()
-                }
-
-        dialog = UserEditDialog(user)
+        dialog = UserFormDialog(user=user, parent=self)
         if dialog.exec():
             data = dialog.get_data()
-            user_id = user.get('id_usuario')
-            if not data["nombre"] or not data["email"] or not data["rol"]:
-                QMessageBox.warning(self, "Error", "Todos los campos son obligatorios.")
+            if not all([data["nombre"], data["email"], data["rol"]]):
+                self.show_error("Todos los campos son obligatorios")
                 return
-            msg = self.controller.edit_user(user_id, data)
-            QMessageBox.information(self, "Usuario editado", 
-                                   "Usuario actualizado." if msg else "Error al editar usuario.")
-            self.refresh_data()
-            
+                
+            try:
+                user_id = user.get('id_usuario')
+                result = self.controller.edit_user(user_id, data)
+                if result:
+                    self.refresh_data()
+                    QMessageBox.information(self, "Éxito", "Usuario actualizado correctamente")
+                else:
+                    self.show_error("Error al actualizar el usuario")
+            except Exception as e:
+                self.show_error(str(e))         
+
     def delete_user(self, user):
         """Elimina un usuario después de confirmar"""
         user_id = user.get('id_usuario')

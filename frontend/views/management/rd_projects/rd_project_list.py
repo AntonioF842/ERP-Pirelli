@@ -250,14 +250,10 @@ class RDProjectListView(QWidget):
         view_action = QAction(QIcon("resources/icons/view.png"), "Ver detalles", self)
         edit_action = QAction(QIcon("resources/icons/edit.png"), "Editar", self)
         delete_action = QAction(QIcon("resources/icons/delete.png"), "Eliminar", self)
-        progress_action = QAction(QIcon("resources/icons/progress.png"), "Actualizar progreso", self)
-        report_action = QAction(QIcon("resources/icons/report.png"), "Generar reporte", self)
 
         context_menu.addAction(view_action)
         context_menu.addAction(edit_action)
         context_menu.addSeparator()
-        context_menu.addAction(progress_action)
-        context_menu.addAction(report_action)
         context_menu.addSeparator()
         context_menu.addAction(delete_action)
 
@@ -268,8 +264,6 @@ class RDProjectListView(QWidget):
         view_action.triggered.connect(lambda: self.on_view_project(project_id))
         edit_action.triggered.connect(lambda: self.on_edit_project(project_id))
         delete_action.triggered.connect(lambda: self.on_delete_project(project_id))
-        progress_action.triggered.connect(lambda: self.on_update_progress(project_id))
-        report_action.triggered.connect(lambda: self.on_generate_report(project_id))
 
         context_menu.exec(self.project_table.viewport().mapToGlobal(position))
 

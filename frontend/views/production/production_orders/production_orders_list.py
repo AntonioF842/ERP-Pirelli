@@ -333,16 +333,9 @@ class ProductionOrderListView(QWidget):
         view_action = QAction(QIcon("resources/icons/view.png"), "Ver detalles", self)
         edit_action = QAction(QIcon("resources/icons/edit.png"), "Editar", self)
         delete_action = QAction(QIcon("resources/icons/delete.png"), "Eliminar", self)
-        start_action = QAction(QIcon("resources/icons/play.png"), "Iniciar Producción", self)
-        complete_action = QAction(QIcon("resources/icons/check.png"), "Marcar como Completada", self)
-        cancel_action = QAction(QIcon("resources/icons/cancel.png"), "Cancelar Orden", self)
 
         context_menu.addAction(view_action)
         context_menu.addAction(edit_action)
-        context_menu.addSeparator()
-        context_menu.addAction(start_action)
-        context_menu.addAction(complete_action)
-        context_menu.addAction(cancel_action)
         context_menu.addSeparator()
         context_menu.addAction(delete_action)
 
@@ -353,9 +346,6 @@ class ProductionOrderListView(QWidget):
         view_action.triggered.connect(lambda: self.on_view_order(order_id))
         edit_action.triggered.connect(lambda: self.on_edit_order(order_id))
         delete_action.triggered.connect(lambda: self.on_delete_order(order_id))
-        start_action.triggered.connect(lambda: self.on_start_order(order_id))
-        complete_action.triggered.connect(lambda: self.on_complete_order(order_id))
-        cancel_action.triggered.connect(lambda: self.on_cancel_order(order_id))
 
         context_menu.exec(self.order_table.viewport().mapToGlobal(position))
 

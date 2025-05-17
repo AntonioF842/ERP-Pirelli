@@ -317,14 +317,10 @@ class QualityControlListView(QWidget):
         edit_action = QAction(QIcon("resources/icons/edit.png"), "Editar", self)
         delete_action = QAction(QIcon("resources/icons/delete.png"), "Eliminar", self)
         # Extra
-        report_action = QAction(QIcon("resources/icons/report.png"), "Generar reporte", self)
-        attach_action = QAction(QIcon("resources/icons/attach.png"), "Adjuntar evidencia", self)
 
         context_menu.addAction(view_action)
         context_menu.addAction(edit_action)
         context_menu.addSeparator()
-        context_menu.addAction(report_action)
-        context_menu.addAction(attach_action)
         context_menu.addSeparator()
         context_menu.addAction(delete_action)
 
@@ -335,8 +331,6 @@ class QualityControlListView(QWidget):
         view_action.triggered.connect(lambda: self.on_view_control(control_id))
         edit_action.triggered.connect(lambda: self.on_edit_control(control_id))
         delete_action.triggered.connect(lambda: self.on_delete_control(control_id))
-        report_action.triggered.connect(lambda: self.status_bar.showMessage(f"Generando reporte para control ID: {control_id}"))
-        attach_action.triggered.connect(lambda: self.status_bar.showMessage(f"Adjuntando evidencia para control ID: {control_id}"))
 
         context_menu.exec(self.control_table.viewport().mapToGlobal(position))
 
