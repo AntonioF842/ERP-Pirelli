@@ -1,4 +1,6 @@
 from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user
+from routes.auth import role_required
 from models import OrdenCompra, Proveedor, Usuario, DetalleOrdenCompra, db
 from datetime import datetime
 
@@ -33,14 +35,23 @@ def serialize_purchase_order(order):
     }
 
 @purchase_orders_bp.route('', methods=['GET'])
+@login_required
 def get_purchase_orders():
     """
     Obtiene todas las órdenes de compra.
+    Admin y Supervisor ven todas, Empleados ven solo las suyas.
     """
-    orders = OrdenCompra.query.all()
+    if current_user.rol in ['admin', 'supervisor']:
+        orders = OrdenCompra.query.all()
+    elif current_user.rol == 'empleado':
+        orders = OrdenCompra.query.filter_by(id_usuario=current_user.id_usuario).all()
+    else:
+        return jsonify({'error': 'No autorizado'}), 403
+
     return jsonify([serialize_purchase_order(order) for order in orders])
 
 @purchase_orders_bp.route('', methods=['POST'])
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden crear
 def create_purchase_order():
     """
     Crea una nueva orden de compra.
@@ -49,17 +60,14 @@ def create_purchase_order():
 
     # Validaciones de campos obligatorios
     if 'supplier_id' not in data:
-        return jsonify({'error': "Missing field: supplier_id"}), 400
-
-    if 'user_id' not in data:
-        return jsonify({'error': "Missing field: user_id"}), 400
+        return jsonify({'error': "Falta el campo: supplier_id"}), 400
 
     # Ignorar po_id si lo mandan
     data.pop('po_id', None)
 
     new_order = OrdenCompra(
         id_proveedor=data['supplier_id'],
-        id_usuario=data['user_id'],
+        id_usuario=current_user.id_usuario,  # Usar el usuario actual
         fecha=datetime.strptime(data['date'], '%Y-%m-%d').date(),
         fecha_entrega_esperada=datetime.strptime(data['delivery_date'], '%Y-%m-%d').date() if data.get('delivery_date') else None,
         estado=data.get('status', 'pendiente'),
@@ -81,18 +89,30 @@ def create_purchase_order():
             db.session.add(new_detalle)
         db.session.commit()
 
-    return jsonify({'message': 'Purchase order created successfully', 'po_id': new_order.id_orden_compra}), 201
+    return jsonify({
+        'message': 'Orden de compra creada exitosamente',
+        'po_id': new_order.id_orden_compra
+    }), 201
 
 @purchase_orders_bp.route('/<int:id>', methods=['PUT'])
+@login_required
 def update_purchase_order(id):
     """
     Actualiza una orden de compra existente.
+    Admin y Supervisor pueden actualizar cualquier orden.
+    Empleados solo pueden actualizar las suyas.
     """
     order = OrdenCompra.query.get_or_404(id)
+    
+    # Verificar permisos
+    if current_user.rol == 'empleado' and order.id_usuario != current_user.id_usuario:
+        return jsonify({'error': 'No autorizado para modificar esta orden'}), 403
+
     data = request.get_json()
 
-    order.id_proveedor = data.get('supplier_id', order.id_proveedor)
-    order.id_usuario = data.get('user_id', order.id_usuario)
+    # Solo admin/supervisor pueden cambiar proveedor
+    if 'supplier_id' in data and current_user.rol in ['admin', 'supervisor']:
+        order.id_proveedor = data['supplier_id']
     
     if 'date' in data:
         order.fecha = datetime.strptime(data['date'], '%Y-%m-%d').date()
@@ -103,33 +123,48 @@ def update_purchase_order(id):
         else:
             order.fecha_entrega_esperada = None
 
-    order.estado = data.get('status', order.estado)
+    # Solo admin/supervisor pueden cambiar estado
+    if 'status' in data and current_user.rol in ['admin', 'supervisor']:
+        order.estado = data['status']
+
     order.total = data.get('total', order.total)
 
     db.session.commit()
 
-    # TODO: Implementar actualización de detalles si se desea
-
-    return jsonify({'message': 'Purchase order updated successfully'})
+    return jsonify({'message': 'Orden de compra actualizada exitosamente'})
 
 @purchase_orders_bp.route('/<int:id>', methods=['DELETE'])
+@role_required('admin')  # Solo admin puede eliminar
 def delete_purchase_order(id):
     """
     Elimina una orden de compra junto con sus detalles.
+    Solo disponible para administradores.
     """
     order = OrdenCompra.query.get_or_404(id)
+
+    # Verificar si la orden ya fue procesada
+    if order.estado in ['aprobada', 'completada']:
+        return jsonify({
+            'error': 'No se puede eliminar una orden en estado aprobada o completada'
+        }), 400
 
     # Primero eliminar detalles relacionados
     DetalleOrdenCompra.query.filter_by(id_orden_compra=id).delete()
     db.session.delete(order)
     db.session.commit()
 
-    return jsonify({'message': 'Purchase order deleted successfully'})
+    return jsonify({'message': 'Orden de compra eliminada exitosamente'})
 
 @purchase_orders_bp.route('/<int:id>', methods=['GET'])
+@login_required
 def get_purchase_order(id):
     """
     Obtiene una orden de compra específica por ID.
+    Admin y Supervisor ven cualquier orden, Empleados solo las suyas.
     """
     order = OrdenCompra.query.get_or_404(id)
+    
+    if current_user.rol == 'empleado' and order.id_usuario != current_user.id_usuario:
+        return jsonify({'error': 'No autorizado para ver esta orden'}), 403
+
     return jsonify(serialize_purchase_order(order))

@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify, request
 from models import NormativaLegal, db
 from datetime import datetime
+from routes.auth import role_required, login_required
 
 legal_regulations_bp = Blueprint('legal_regulations', __name__)
 
 @legal_regulations_bp.route('/legal_regulations', methods=['GET'])
+@login_required
 def get_legal_regulations():
     regulations = NormativaLegal.query.all()
     return jsonify([{
@@ -17,6 +19,7 @@ def get_legal_regulations():
     } for reg in regulations])
 
 @legal_regulations_bp.route('/legal_regulations', methods=['POST'])
+@role_required('admin')
 def create_legal_regulation():
     data = request.get_json()
     new_regulation = NormativaLegal(
@@ -31,6 +34,7 @@ def create_legal_regulation():
     return jsonify({'message': 'Legal regulation created successfully'}), 201
 
 @legal_regulations_bp.route('/legal_regulations/<int:id>', methods=['PUT'])
+@role_required('admin')
 def update_legal_regulation(id):
     regulation = NormativaLegal.query.get_or_404(id)
     data = request.get_json()
@@ -44,6 +48,7 @@ def update_legal_regulation(id):
     return jsonify({'message': 'Legal regulation updated successfully'})
 
 @legal_regulations_bp.route('/legal_regulations/<int:id>', methods=['DELETE'])
+@role_required('admin')
 def delete_legal_regulation(id):
     regulation = NormativaLegal.query.get_or_404(id)
     db.session.delete(regulation)

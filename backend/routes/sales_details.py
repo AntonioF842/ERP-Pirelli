@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from models import db, DetalleVenta, Producto, Venta
 from datetime import date
+from routes.auth import role_required
 
 sales_details_bp = Blueprint('sales_details', __name__)
 
@@ -15,6 +16,11 @@ def get_sales_details():
         product_id = request.args.get('product_id')
         
         query = DetalleVenta.query
+        
+        # Admin y Supervisor ven todos los detalles
+        if current_user.rol == 'empleado':
+            # Empleados solo ven detalles de sus propias ventas
+            query = query.join(Venta).filter(Venta.id_empleado == current_user.id_empleado)
         
         if sale_id:
             query = query.filter_by(id_venta=sale_id)
@@ -50,9 +56,13 @@ def get_sales_details():
 @login_required
 def get_sales_detail(id_detalle):
     try:
-        detalle = DetalleVenta.query.get(id_detalle)
-        if not detalle:
-            return jsonify({'error': 'Detalle de venta no encontrado'}), 404
+        detalle = DetalleVenta.query.get_or_404(id_detalle)
+        
+        # Verificar acceso para empleados
+        if current_user.rol == 'empleado':
+            venta = Venta.query.get(detalle.id_venta)
+            if not venta or venta.id_empleado != current_user.id_empleado:
+                return jsonify({'error': 'No autorizado'}), 403
             
         producto = Producto.query.get(detalle.id_producto)
         venta = Venta.query.get(detalle.id_venta)
@@ -76,11 +86,8 @@ def get_sales_detail(id_detalle):
 
 # Create a new sales detail
 @sales_details_bp.route('/sales-details', methods=['POST'])
-@login_required
+@role_required('admin', 'supervisor', 'empleado')  # Empleados pueden crear detalles si son sus ventas
 def create_sales_detail():
-    if current_user.rol not in ['admin', 'supervisor']:
-        return jsonify({'error': 'No autorizado'}), 403
-        
     try:
         data = request.get_json()
         
@@ -88,6 +95,12 @@ def create_sales_detail():
         required_fields = ['id_venta', 'id_producto', 'cantidad', 'precio_unitario']
         if not all(field in data for field in required_fields):
             return jsonify({'error': 'Faltan campos requeridos'}), 400
+        
+        # Verificar si el empleado puede modificar esta venta
+        if current_user.rol == 'empleado':
+            venta = Venta.query.get(data['id_venta'])
+            if not venta or venta.id_empleado != current_user.id_empleado:
+                return jsonify({'error': 'No autorizado para modificar esta venta'}), 403
             
         # Calculate subtotal
         subtotal = float(data['cantidad']) * float(data['precio_unitario'])
@@ -120,15 +133,16 @@ def create_sales_detail():
 
 # Update a sales detail
 @sales_details_bp.route('/sales-details/<int:id_detalle>', methods=['PUT'])
-@login_required
+@role_required('admin', 'supervisor', 'empleado')  # Empleados pueden editar sus detalles
 def update_sales_detail(id_detalle):
-    if current_user.rol not in ['admin', 'supervisor']:
-        return jsonify({'error': 'No autorizado'}), 403
-        
     try:
-        detalle = DetalleVenta.query.get(id_detalle)
-        if not detalle:
-            return jsonify({'error': 'Detalle de venta no encontrado'}), 404
+        detalle = DetalleVenta.query.get_or_404(id_detalle)
+        
+        # Verificar permisos
+        if current_user.rol == 'empleado':
+            venta = Venta.query.get(detalle.id_venta)
+            if not venta or venta.id_empleado != current_user.id_empleado:
+                return jsonify({'error': 'No autorizado para modificar este detalle'}), 403
             
         data = request.get_json()
         
@@ -159,15 +173,10 @@ def update_sales_detail(id_detalle):
 
 # Delete a sales detail
 @sales_details_bp.route('/sales-details/<int:id_detalle>', methods=['DELETE'])
-@login_required
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden eliminar
 def delete_sales_detail(id_detalle):
-    if current_user.rol != 'admin':
-        return jsonify({'error': 'No autorizado'}), 403
-        
     try:
-        detalle = DetalleVenta.query.get(id_detalle)
-        if not detalle:
-            return jsonify({'error': 'Detalle de venta no encontrado'}), 404
+        detalle = DetalleVenta.query.get_or_404(id_detalle)
             
         sale_id = detalle.id_venta
         db.session.delete(detalle)

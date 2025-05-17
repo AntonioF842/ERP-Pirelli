@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
+from routes.auth import role_required
 from models import ProyectoID, db
 from datetime import datetime
 
@@ -9,7 +10,18 @@ r_d_projects_bp = Blueprint('r_d_projects', __name__)
 @login_required
 def get_r_d_projects():
     """Obtiene todos los proyectos de I+D"""
-    projects = ProyectoID.query.all()
+    # Admin ve todos los proyectos
+    if current_user.rol == 'admin':
+        projects = ProyectoID.query.all()
+    # Supervisor solo ve proyectos activos
+    elif current_user.rol == 'supervisor':
+        projects = ProyectoID.query.filter(ProyectoID.estado.in_(['activo', 'planificacion'])).all()
+    # Empleado solo ve proyectos activos donde está asignado (requeriría relación muchos-a-muchos)
+    elif current_user.rol == 'empleado':
+        projects = ProyectoID.query.filter_by(estado='activo').all()  # Simplificado
+    else:
+        return jsonify({"error": "No autorizado"}), 403
+
     projects_list = [{
         'id_proyecto': p.id_proyecto,
         'nombre': p.nombre,
@@ -25,9 +37,14 @@ def get_r_d_projects():
 @login_required
 def get_r_d_project(id):
     """Obtiene un proyecto de I+D por su ID"""
-    project = ProyectoID.query.get(id)
-    if not project:
-        return jsonify({"error": "Proyecto no encontrado"}), 404
+    project = ProyectoID.query.get_or_404(id)
+    
+    # Restricciones por rol
+    if current_user.rol == 'supervisor' and project.estado not in ['activo', 'planificacion']:
+        return jsonify({"error": "No autorizado"}), 403
+    elif current_user.rol == 'empleado' and project.estado != 'activo':
+        return jsonify({"error": "No autorizado"}), 403
+        
     return jsonify({
         'id_proyecto': project.id_proyecto,
         'nombre': project.nombre,
@@ -39,7 +56,7 @@ def get_r_d_project(id):
     })
 
 @r_d_projects_bp.route('/r_d_projects', methods=['POST'])
-@login_required
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden crear
 def create_r_d_project():
     """Crea un nuevo proyecto de I+D"""
     data = request.json
@@ -59,7 +76,10 @@ def create_r_d_project():
         )
         db.session.add(new_project)
         db.session.commit()
-        return jsonify({"message": "Proyecto creado exitosamente"}), 201
+        return jsonify({
+            "message": "Proyecto creado exitosamente",
+            "id_proyecto": new_project.id_proyecto
+        }), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -68,9 +88,13 @@ def create_r_d_project():
 @login_required
 def update_r_d_project(id):
     """Actualiza un proyecto de I+D existente"""
-    project = ProyectoID.query.get(id)
-    if not project:
-        return jsonify({"error": "Proyecto no encontrado"}), 404
+    project = ProyectoID.query.get_or_404(id)
+    
+    # Restricciones por rol
+    if current_user.rol == 'empleado':
+        return jsonify({"error": "No autorizado"}), 403
+    elif current_user.rol == 'supervisor' and project.estado == 'completado':
+        return jsonify({"error": "No puede modificar proyectos completados"}), 403
 
     data = request.json
     
@@ -84,7 +108,14 @@ def update_r_d_project(id):
             project.fecha_fin_estimada = datetime.strptime(data['fecha_fin_estimada'], '%Y-%m-%d').date()
             
         project.presupuesto = data.get('presupuesto', project.presupuesto)
-        project.estado = data.get('estado', project.estado)
+        
+        # Solo admin puede cambiar el estado a 'completado'
+        if 'estado' in data and data['estado'] == 'completado':
+            if current_user.rol != 'admin':
+                return jsonify({"error": "Solo admin puede completar proyectos"}), 403
+            project.estado = data['estado']
+        elif 'estado' in data:
+            project.estado = data['estado']
         
         db.session.commit()
         return jsonify({"message": "Proyecto actualizado exitosamente"})
@@ -93,12 +124,15 @@ def update_r_d_project(id):
         return jsonify({"error": str(e)}), 500
 
 @r_d_projects_bp.route('/r_d_projects/<int:id>', methods=['DELETE'])
-@login_required
+@role_required('admin')  # Solo admin puede eliminar
 def delete_r_d_project(id):
     """Elimina un proyecto de I+D"""
-    project = ProyectoID.query.get(id)
-    if not project:
-        return jsonify({"error": "Proyecto no encontrado"}), 404
+    project = ProyectoID.query.get_or_404(id)
+    
+    # Validar que el proyecto no tenga dependencias
+    # (asumiendo que hay relaciones con otras tablas)
+    if hasattr(project, 'tareas') and len(project.tareas) > 0:
+        return jsonify({"error": "No se puede eliminar, tiene tareas asociadas"}), 400
         
     try:
         db.session.delete(project)

@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
+from routes.auth import role_required
 from models import Cliente, db
 
 clients_bp = Blueprint('clients_bp', __name__)
@@ -7,7 +8,17 @@ clients_bp = Blueprint('clients_bp', __name__)
 @clients_bp.route('/clientes', methods=['GET'])
 @login_required
 def get_clients():
-    clientes = Cliente.query.all()
+    # Admin y Supervisor tienen acceso completo
+    if current_user.rol in ['admin', 'supervisor']:
+        clientes = Cliente.query.all()
+    # Empleados solo ven clientes de su área o tipo específico
+    elif current_user.rol == 'empleado':
+        # Aquí puedes agregar lógica para filtrar clientes según el área del empleado
+        # Por ejemplo, si los empleados solo ven clientes de tipo 'minorista'
+        clientes = Cliente.query.filter_by(tipo='minorista').all()
+    else:
+        return jsonify({"error": "No autorizado"}), 403
+
     clientes_list = [{
         "id_cliente": c.id_cliente,
         "nombre": c.nombre,
@@ -22,9 +33,12 @@ def get_clients():
 @clients_bp.route('/clientes/<int:id>', methods=['GET'])
 @login_required
 def get_client(id):
-    cliente = Cliente.query.get(id)
-    if not cliente:
-        return jsonify({"error": "Cliente no encontrado"}), 404
+    cliente = Cliente.query.get_or_404(id)
+    
+    # Empleados solo pueden ver clientes de tipo 'minorista'
+    if current_user.rol == 'empleado' and cliente.tipo != 'minorista':
+        return jsonify({"error": "No autorizado"}), 403
+        
     return jsonify({
         "id_cliente": cliente.id_cliente,
         "nombre": cliente.nombre,
@@ -36,7 +50,7 @@ def get_client(id):
     })
 
 @clients_bp.route('/clientes', methods=['POST'])
-@login_required
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden crear
 def create_client():
     data = request.json
     
@@ -57,15 +71,12 @@ def create_client():
     
     db.session.add(nuevo_cliente)
     db.session.commit()
-    return jsonify({"message": "Cliente creado exitosamente", "id_cliente": nuevo_cliente.id_cliente})
+    return jsonify({"message": "Cliente creado exitosamente", "id_cliente": nuevo_cliente.id_cliente}), 201
 
 @clients_bp.route('/clientes/<int:id>', methods=['PUT'])
-@login_required
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden actualizar
 def update_client(id):
-    cliente = Cliente.query.get(id)
-    if not cliente:
-        return jsonify({"error": "Cliente no encontrado"}), 404
-
+    cliente = Cliente.query.get_or_404(id)
     data = request.json
     
     # Validaciones básicas
@@ -83,11 +94,13 @@ def update_client(id):
     return jsonify({"message": "Cliente actualizado"})
 
 @clients_bp.route('/clientes/<int:id>', methods=['DELETE'])
-@login_required
+@role_required('admin')  # Solo admin puede eliminar
 def delete_client(id):
-    cliente = Cliente.query.get(id)
-    if not cliente:
-        return jsonify({"error": "Cliente no encontrado"}), 404
+    cliente = Cliente.query.get_or_404(id)
+    
+    # Verificar si el cliente tiene órdenes de venta asociadas
+    if hasattr(cliente, 'ventas') and len(cliente.ventas) > 0:
+        return jsonify({"error": "No se puede eliminar el cliente porque tiene ventas asociadas"}), 400
 
     db.session.delete(cliente)
     db.session.commit()

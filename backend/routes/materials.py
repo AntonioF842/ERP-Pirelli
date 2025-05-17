@@ -1,11 +1,14 @@
 from flask import Blueprint, jsonify, request, abort
 from models import db, Material, Inventario
+from routes.auth import role_required, login_required
+from flask_login import current_user
 
 # ¡Corrige el prefijo aquí!
 materials_bp = Blueprint("materials", __name__, url_prefix="/api/materiales")
 
 # GET /api/materiales - Listar todos los materiales
 @materials_bp.route("", methods=["GET"])
+@login_required
 def get_materials():
     materiales = Material.query.all()
     result = [
@@ -22,6 +25,7 @@ def get_materials():
 
 # GET /api/materiales/<id> - Obtener material puntual
 @materials_bp.route("/<int:material_id>", methods=["GET"])
+@login_required
 def get_material(material_id):
     m = Material.query.get_or_404(material_id)
     data = {
@@ -36,6 +40,7 @@ def get_material(material_id):
 
 # POST /api/materiales - Crear material
 @materials_bp.route("", methods=["POST"])
+@role_required("admin", "supervisor")
 def create_material():
     data = request.json or {}
     nombre = data.get("nombre")
@@ -54,6 +59,7 @@ def create_material():
 
 # PUT /api/materiales/<id> - Editar material
 @materials_bp.route("/<int:material_id>", methods=["PUT"])
+@role_required("admin", "supervisor")
 def update_material(material_id):
     m = Material.query.get_or_404(material_id)
     data = request.json or {}
@@ -67,6 +73,7 @@ def update_material(material_id):
 
 # DELETE /api/materiales/<id> - Eliminar material
 @materials_bp.route("/<int:material_id>", methods=["DELETE"])
+@role_required("admin", "supervisor")
 def delete_material(material_id):
     m = Material.query.get_or_404(material_id)
     # Check for references in the inventory

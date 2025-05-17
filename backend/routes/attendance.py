@@ -1,10 +1,13 @@
 from flask import Blueprint, jsonify, request
 from models import Asistencia, Empleado, db
 from datetime import datetime, time
+from routes.auth import role_required, login_required
+from flask_login import current_user
 
 attendance_bp = Blueprint('attendance', __name__)
 
 @attendance_bp.route('/attendance', methods=['GET'])
+@role_required('admin', 'supervisor')
 def get_attendance():
     attendance_records = Asistencia.query.all()
     return jsonify([{
@@ -18,8 +21,11 @@ def get_attendance():
     } for record in attendance_records])
 
 @attendance_bp.route('/attendance/<int:id>', methods=['GET'])
+@login_required
 def get_attendance_by_id(id):
     record = Asistencia.query.get_or_404(id)
+    if current_user.rol == 'empleado' and record.id_empleado != current_user.id_empleado:
+        return jsonify({'error': 'No tienes permiso para ver este registro'}), 403
     return jsonify({
         'id_asistencia': record.id_asistencia,
         'id_empleado': record.id_empleado,
@@ -31,6 +37,7 @@ def get_attendance_by_id(id):
     })
 
 @attendance_bp.route('/attendance', methods=['POST'])
+@role_required ('admin', 'supervisor')
 def create_attendance():
     data = request.get_json()
     new_attendance = Asistencia(
@@ -45,6 +52,7 @@ def create_attendance():
     return jsonify({'message': 'Attendance record created successfully'}), 201
 
 @attendance_bp.route('/attendance/<int:id>', methods=['PUT'])
+@role_required ('admin', 'supervisor')
 def update_attendance(id):
     attendance = Asistencia.query.get_or_404(id)
     data = request.get_json()
@@ -60,6 +68,7 @@ def update_attendance(id):
     return jsonify({'message': 'Attendance record updated successfully'})
 
 @attendance_bp.route('/attendance/<int:id>', methods=['DELETE'])
+@role_required ('admin', 'supervisor')
 def delete_attendance(id):
     attendance = Asistencia.query.get_or_404(id)
     db.session.delete(attendance)

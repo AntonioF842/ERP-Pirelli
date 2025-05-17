@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request, current_app
-from flask_login import login_required
+from flask_login import login_required, current_user
+from routes.auth import role_required
 from datetime import datetime
-from models import OrdenProduccion, db
+from models import OrdenProduccion, Usuario, db
 from sqlalchemy.exc import SQLAlchemyError
 
 production_orders_bp = Blueprint('production_orders', __name__)
@@ -10,7 +11,21 @@ production_orders_bp = Blueprint('production_orders', __name__)
 @login_required
 def get_production_orders():
     try:
-        orders = OrdenProduccion.query.all()
+        # Admin ve todas las órdenes
+        if current_user.rol == 'admin':
+            orders = OrdenProduccion.query.all()
+        # Supervisor ve órdenes de su área o equipo
+        elif current_user.rol == 'supervisor':
+            # Asume que el supervisor tiene un id_area asociado
+            orders = OrdenProduccion.query.join(Usuario).filter(
+                Usuario.id_area == current_user.id_area
+            ).all()
+        # Empleado solo ve sus propias órdenes
+        elif current_user.rol == 'empleado':
+            orders = OrdenProduccion.query.filter_by(id_usuario=current_user.id_usuario).all()
+        else:
+            return jsonify({"error": "No autorizado"}), 403
+
         return jsonify([{
             'id_orden_produccion': order.id_orden_produccion,
             'id_producto': order.id_producto,
@@ -36,12 +51,20 @@ def get_production_orders():
 @login_required
 def create_production_order():
     try:
+        # Solo admin, supervisor y empleados de producción pueden crear órdenes
+        if current_user.rol not in ['admin', 'supervisor', 'empleado']:
+            return jsonify({"error": "No autorizado"}), 403
+            
         data = request.get_json()
         
         # Validación básica
-        required_fields = ['id_producto', 'cantidad', 'fecha_inicio', 'id_usuario']
+        required_fields = ['id_producto', 'cantidad', 'fecha_inicio']
         if not all(field in data for field in required_fields):
             return jsonify({"error": "Faltan campos requeridos"}), 400
+            
+        # Empleados no pueden asignar a otros usuarios
+        if current_user.rol == 'empleado':
+            data['id_usuario'] = current_user.id_usuario
             
         # Parse dates safely
         try:
@@ -56,7 +79,7 @@ def create_production_order():
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
             estado=data.get('estado', 'planificada'),
-            id_usuario=data['id_usuario']
+            id_usuario=data.get('id_usuario', current_user.id_usuario)
         )
         
         db.session.add(new_order)
@@ -81,41 +104,35 @@ def create_production_order():
 @production_orders_bp.route('/ordenes_produccion/<int:id>', methods=['PUT'])
 @login_required
 def update_production_order(id):
-    """Endpoint para actualizar una orden de producción"""
     try:
-        # Obtener la orden
-        order = OrdenProduccion.query.get(id)
-        if not order:
-            return jsonify({"error": "Orden no encontrada"}), 404
+        order = OrdenProduccion.query.get_or_404(id)
+        
+        # Verificar permisos
+        if current_user.rol == 'empleado' and order.id_usuario != current_user.id_usuario:
+            return jsonify({"error": "Solo puedes modificar tus propias órdenes"}), 403
+            
+        # Admin y supervisor pueden modificar cualquier orden
+        if current_user.rol not in ['admin', 'supervisor', 'empleado']:
+            return jsonify({"error": "No autorizado"}), 403
 
-        # Validar datos
         data = request.get_json()
         if not data:
             return jsonify({"error": "Datos no proporcionados"}), 400
 
-        # Configurar logging si current_app no está disponible
+        # Configurar logging
         logger = current_app.logger if current_app else print
 
-        # logger.info(f"Actualizando orden {id} con datos: {data}")
-
-        # Campos actualizables y sus validaciones
+        # Campos actualizables según rol
         updatable_fields = {
-            'estado': lambda x: x in ['planificada', 'en_proceso', 'completada', 'cancelada'],
-            'cantidad': lambda x: isinstance(x, int) and x > 0,
-            'fecha_inicio': lambda x: True,  # Validación se hace después
-            'fecha_fin': lambda x: True,
-            'id_producto': lambda x: isinstance(x, int),
-            'id_usuario': lambda x: isinstance(x, int),
-            'notas': lambda x: isinstance(x, str)
+            'admin': ['estado', 'cantidad', 'fecha_inicio', 'fecha_fin', 'id_producto', 'id_usuario', 'notas'],
+            'supervisor': ['estado', 'cantidad', 'fecha_inicio', 'fecha_fin', 'notas'],
+            'empleado': ['estado', 'notas']  # Empleados solo pueden actualizar estado y notas
         }
 
         changes_made = False
-        for field, validator in updatable_fields.items():
-            if field in data:
-                if not validator(data[field]):
-                    return jsonify({"error": f"Valor inválido para {field}"}), 400
-                
-                # Manejo especial para fechas
+        for field in data:
+            if field in updatable_fields[current_user.rol]:
+                # Validación de fechas
                 if field in ['fecha_inicio', 'fecha_fin']:
                     try:
                         if data[field]:
@@ -131,23 +148,21 @@ def update_production_order(id):
                     setattr(order, field, data[field])
                 
                 changes_made = True
+            else:
+                return jsonify({"error": f"No tienes permiso para modificar el campo {field}"}), 403
 
         if not changes_made:
             return jsonify({"warning": "No se realizaron cambios"}), 200
 
-        # Validación de negocio adicional
+        # Validación de negocio
         if order.fecha_fin and order.fecha_inicio and order.fecha_fin < order.fecha_inicio:
             return jsonify({
                 "error": "La fecha fin no puede ser anterior a la fecha inicio"
             }), 400
 
-        # Guardar cambios
         db.session.commit()
 
-        # logger.info(f"Orden {id} actualizada exitosamente")
-
-        # Respuesta exitosa
-        response_data = {
+        return jsonify({
             "message": "Orden actualizada exitosamente",
             "orden": {
                 "id": order.id_orden_produccion,
@@ -155,9 +170,7 @@ def update_production_order(id):
                 "producto": order.producto.nombre if order.producto else None,
                 "usuario": order.usuario.nombre if order.usuario else None
             }
-        }
-
-        return jsonify(response_data), 200
+        }), 200
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -177,10 +190,17 @@ def update_production_order(id):
         return jsonify({"error": "Error interno del servidor"}), 500
 
 @production_orders_bp.route('/ordenes_produccion/<int:id>', methods=['DELETE'])
-@login_required
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden eliminar
 def delete_production_order(id):
     try:
         order = OrdenProduccion.query.get_or_404(id)
+        
+        # Validar que la orden no esté en progreso o completada
+        if order.estado in ['en_proceso', 'completada']:
+            return jsonify({
+                "error": f"No se puede eliminar una orden en estado {order.estado}"
+            }), 400
+            
         db.session.delete(order)
         db.session.commit()
         return jsonify({'message': 'Orden de producción eliminada exitosamente'})

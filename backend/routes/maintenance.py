@@ -2,11 +2,12 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from models import Mantenimiento, ActivoProduccion, Empleado, db
 from datetime import datetime
+from routes.auth import role_required, login_required
 
 maintenance_bp = Blueprint('maintenance', __name__)
 
 @maintenance_bp.route('/maintenance', methods=['GET'])
-@login_required
+@role_required('admin', 'supervisor')
 def get_maintenance():
     """Obtiene todos los registros de mantenimiento"""
     maintenance_records = Mantenimiento.query.all()
@@ -23,7 +24,7 @@ def get_maintenance():
     } for maint in maintenance_records])
 
 @maintenance_bp.route('/maintenance/<int:id>', methods=['GET'])
-@login_required
+@role_required('admin', 'supervisor')
 def get_maintenance_record(id):
     """Obtiene un registro de mantenimiento específico"""
     maint = Mantenimiento.query.get_or_404(id)
@@ -72,7 +73,7 @@ def create_maintenance():
         return jsonify({'error': str(e)}), 500
 
 @maintenance_bp.route('/maintenance/<int:id>', methods=['PUT'])
-@login_required
+@role_required('admin', 'supervisor')
 def update_maintenance(id):
     """Actualiza un registro de mantenimiento existente"""
     maint = Mantenimiento.query.get_or_404(id)

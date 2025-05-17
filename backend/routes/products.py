@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
+from routes.auth import role_required
 from models import Producto, db
 from werkzeug.exceptions import BadRequest
 from datetime import datetime
@@ -31,6 +32,10 @@ def get_products():
                 (Producto.codigo.ilike(f'%{search}%'))
             )
         
+        # Empleados solo ven productos activos
+        if current_user.rol == 'empleado':
+            query = query.filter_by(estado='activo')
+        
         products = query.order_by(Producto.nombre.asc()).all()
         
         # Formatear respuesta
@@ -59,6 +64,10 @@ def get_product(id):
     try:
         product = Producto.query.get_or_404(id)
         
+        # Empleados solo pueden ver productos activos
+        if current_user.rol == 'empleado' and product.estado != 'activo':
+            return jsonify({"error": "No autorizado"}), 403
+            
         return jsonify({
             "id_producto": product.id_producto,
             "codigo": product.codigo,
@@ -76,7 +85,7 @@ def get_product(id):
         return jsonify({"error": "Producto no encontrado"}), 404
 
 @products_bp.route('/products', methods=['POST'])
-@login_required
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden crear
 def create_product():
     """Crea un nuevo producto"""
     try:
@@ -129,7 +138,7 @@ def create_product():
         return jsonify({"error": "Error interno al crear producto"}), 500
 
 @products_bp.route('/products/<int:id>', methods=['PUT'])
-@login_required
+@role_required('admin', 'supervisor')  # Solo admin y supervisor pueden actualizar
 def update_product(id):
     """Actualiza un producto existente"""
     try:
@@ -177,7 +186,7 @@ def update_product(id):
         return jsonify({"error": "Error interno al actualizar producto"}), 500
 
 @products_bp.route('/products/<int:id>', methods=['DELETE'])
-@login_required
+@role_required('admin')  # Solo admin puede eliminar
 def delete_product(id):
     """Elimina un producto"""
     try:
@@ -185,6 +194,8 @@ def delete_product(id):
         
         # Verificar si el producto está siendo usado en otras tablas
         # (Implementar según tu modelo de datos)
+        if hasattr(product, 'ventas') and len(product.ventas) > 0:
+            return jsonify({"error": "No se puede eliminar el producto porque tiene ventas asociadas"}), 400
         
         db.session.delete(product)
         db.session.commit()

@@ -1,12 +1,19 @@
 from flask import Blueprint, jsonify, request
 from models import Incidente, AreaTrabajo, Empleado, db
 from datetime import datetime
+from routes.auth import role_required, login_required
+from flask_login import current_user
 
 incidents_bp = Blueprint('incidents', __name__)
 
 @incidents_bp.route('/incidents', methods=['GET'])
+@login_required
 def get_incidents():
-    incidents = Incidente.query.all()
+    if current_user.rol == 'empleado':
+        # Filtrar incidentes solo del área del empleado
+        incidents = Incidente.query.filter_by(id_empleado_reporta=current_user.id_empleado).all()
+    else:
+        incidents = Incidente.query.all()
     return jsonify([{
         'id_incidente': inc.id_incidente,
         'tipo': inc.tipo,
@@ -20,6 +27,7 @@ def get_incidents():
     } for inc in incidents])
 
 @incidents_bp.route('/incidents', methods=['POST'])
+@login_required
 def create_incident():
     data = request.get_json()
     new_incident = Incidente(
@@ -35,6 +43,7 @@ def create_incident():
     return jsonify({'message': 'Incident record created successfully'}), 201
 
 @incidents_bp.route('/incidents/<int:id>', methods=['PUT'])
+@role_required('admin', 'supervisor')
 def update_incident(id):
     incident = Incidente.query.get_or_404(id)
     data = request.get_json()
@@ -49,6 +58,7 @@ def update_incident(id):
     return jsonify({'message': 'Incident record updated successfully'})
 
 @incidents_bp.route('/incidents/<int:id>', methods=['DELETE'])
+@role_required('admin', 'supervisor')
 def delete_incident(id):
     incident = Incidente.query.get_or_404(id)
     db.session.delete(incident)
