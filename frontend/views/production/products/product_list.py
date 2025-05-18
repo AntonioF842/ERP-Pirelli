@@ -55,53 +55,16 @@ class ProductListView(QWidget):
         
         # Layout principal
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
         
+        # Título de sección
+        title_label = QLabel("Gestión de Productos")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+        main_layout.addWidget(title_label)
+
         # Barra de herramientas
-        self._setup_toolbar(main_layout)
-        
-        # Barra de filtros
-        self._setup_filter_bar(main_layout)
-        
-        # Tabla de productos
-        self._setup_product_table(main_layout)
-        
-        # Barra de resumen
-        self._setup_summary_bar(main_layout)
-        
-        # Barra de estado
-        self._setup_status_bar(main_layout)
-
-    def _setup_toolbar(self, parent_layout):
-        """Configura la barra de herramientas superior"""
-        toolbar = QToolBar()
-        toolbar.setIconSize(QSize(24, 24))
-        
-        # Acciones
-        self.add_action = QAction(QIcon("resources/icons/add.png"), "Nuevo Producto", self)
-        self.refresh_action = QAction(QIcon("resources/icons/refresh.png"), "Actualizar", self)
-        self.export_action = QAction(QIcon("resources/icons/export.png"), "Exportar", self)
-        self.print_action = QAction(QIcon("resources/icons/print.png"), "Imprimir", self)
-        
-        # Agregar acciones
-        toolbar.addAction(self.add_action)
-        toolbar.addAction(self.refresh_action)
-        toolbar.addSeparator()
-        toolbar.addAction(self.export_action)
-        toolbar.addAction(self.print_action)
-        
-        parent_layout.addWidget(toolbar)
-
-    def _setup_filter_bar(self, parent_layout):
-        """Configura la barra de filtros"""
-        filter_layout = QHBoxLayout()
-        
-        # Filtro de búsqueda
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Buscar productos...")
-        self.search_input.setClearButtonEnabled(True)
-        self.search_input.setMaximumWidth(300)
+        toolbar_layout = QHBoxLayout()
         
         # Filtro de categoría
         self.category_filter = QComboBox()
@@ -115,91 +78,167 @@ class ProductListView(QWidget):
         for value, display in Product.get_estados_lista():
             self.status_filter.addItem(display, value)
         
-        # Botón limpiar filtros
-        clear_btn = QPushButton("Limpiar")
-        clear_btn.setIcon(QIcon("resources/icons/clear.png"))
-        
-        # Organizar widgets
-        filter_layout.addWidget(QLabel("Buscar:"))
-        filter_layout.addWidget(self.search_input)
-        filter_layout.addWidget(QLabel("Categoría:"))
-        filter_layout.addWidget(self.category_filter)
-        filter_layout.addWidget(QLabel("Estado:"))
-        filter_layout.addWidget(self.status_filter)
-        filter_layout.addWidget(clear_btn)
-        filter_layout.addStretch()
-        
-        parent_layout.addLayout(filter_layout)
+        # Campo de búsqueda
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Buscar por nombre o código...")
+        self.search_input.textChanged.connect(self.on_search_changed)
 
-    def _setup_product_table(self, parent_layout):
-        """Configura la tabla de productos"""
+        # Botón de búsqueda
+        search_btn = QPushButton("Buscar")
+        search_btn.clicked.connect(self._on_filters_changed)
+
+        # Botón para añadir
+        self.add_btn = QPushButton("Nuevo Producto")
+        self.add_btn.setIcon(QIcon("resources/icons/add.png"))
+        self.add_btn.clicked.connect(self.on_add_product)
+
+        # Botón de actualizar
+        self.refresh_btn = QPushButton("Actualizar")
+        self.refresh_btn.setIcon(QIcon("resources/icons/refresh.png"))
+        self.refresh_btn.clicked.connect(self.refresh_data)
+
+        # Agregar widgets a la barra de herramientas
+        toolbar_layout.addWidget(QLabel("Categoría:"))
+        toolbar_layout.addWidget(self.category_filter)
+        toolbar_layout.addWidget(QLabel("Estado:"))
+        toolbar_layout.addWidget(self.status_filter)
+        toolbar_layout.addWidget(self.search_input)
+        toolbar_layout.addWidget(search_btn)
+        toolbar_layout.addStretch()
+        toolbar_layout.addWidget(self.add_btn)
+        toolbar_layout.addWidget(self.refresh_btn)
+
+        main_layout.addLayout(toolbar_layout)
+
+        # Tabla de productos
         self.product_table = QTableView()
         self.product_table.setModel(self.proxy_model)
-        
-        # Configuración de la tabla
         self.product_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.product_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.product_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.product_table.setAlternatingRowColors(True)
-        self.product_table.setSortingEnabled(True)
+        self.product_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.product_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # ID
+        self.product_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Código
+        self.product_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)  # Precio
+        self.product_table.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)  # Estado
         self.product_table.verticalHeader().setVisible(False)
         self.product_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        
-        # Configurar columnas
-        header = self.product_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)  # ID
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # Código
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)          # Nombre
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents) # Categoría
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents) # Precio
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents) # Estado
+        self.product_table.customContextMenuRequested.connect(self.show_context_menu)
+        self.product_table.doubleClicked.connect(self.on_row_double_clicked)
         
         # Ocultar columnas internas
         self.product_table.setColumnHidden(4, True)  # Valor categoría
         self.product_table.setColumnHidden(5, True)  # Descripción
         self.product_table.setColumnHidden(8, True)  # Valor estado
         
-        parent_layout.addWidget(self.product_table)
+        main_layout.addWidget(self.product_table)
 
-    def _setup_summary_bar(self, parent_layout):
-        """Configura la barra de resumen estadístico"""
-        summary_frame = QFrame()
-        summary_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        
-        summary_layout = QHBoxLayout(summary_frame)
-        summary_layout.setContentsMargins(10, 5, 10, 5)
-        
-        self.total_label = QLabel("Total: <b>0</b>")
+        # Labels de totales
+        summary_layout = QHBoxLayout()
+        self.total_label = QLabel("Total de productos: <b>0</b>")
         self.active_label = QLabel("Activos: <b>0</b>")
         self.discontinued_label = QLabel("Descontinuados: <b>0</b>")
         self.oferta_label = QLabel("En oferta: <b>0</b>")
-        
-        # Añadir widgets
+
         summary_layout.addWidget(self.total_label)
-        summary_layout.addWidget(QLabel("|"))
+        summary_layout.addSpacing(30)
         summary_layout.addWidget(self.active_label)
-        summary_layout.addWidget(QLabel("|"))
+        summary_layout.addSpacing(30)
         summary_layout.addWidget(self.discontinued_label)
-        summary_layout.addWidget(QLabel("|"))
+        summary_layout.addSpacing(30)
         summary_layout.addWidget(self.oferta_label)
         summary_layout.addStretch()
-        
-        parent_layout.addWidget(summary_frame)
+        main_layout.addLayout(summary_layout)
 
-    def _setup_status_bar(self, parent_layout):
-        """Configura la barra de estado"""
+        # Barra de estado
         self.status_bar = QStatusBar()
-        self.status_bar.showMessage("Listo")
-        parent_layout.addWidget(self.status_bar)
+        self.status_bar.showMessage("Sistema ERP - Módulo de Productos")
+        main_layout.addWidget(self.status_bar)
+
+    def setup_filter_proxy(self):
+        """Configura el modelo proxy para filtrado avanzado"""
+        self.proxy_model.filterAcceptsRow = self._filter_accepts_row
+    
+    def _filter_accepts_row(self, source_row, source_parent):
+        """Método personalizado para determinar si una fila cumple con los filtros"""
+        model = self.product_model
+        
+        # Obtener valores de los filtros
+        search_text = self.search_input.text().strip().lower()
+        category = self.category_filter.currentData()
+        status = self.status_filter.currentData()
+        
+        # Si no hay filtros activos, mostrar todas las filas
+        if not search_text and not category and not status:
+            return True
+            
+        # Obtener valores de la fila actual
+        try:
+            codigo = model.item(source_row, 1).text().lower()
+            nombre = model.item(source_row, 2).text().lower()
+            categoria_valor = model.item(source_row, 4).text().lower()
+            estado_valor = model.item(source_row, 8).text().lower()
+            
+            # Filtro de búsqueda (nombre o código)
+            if search_text and not (search_text in nombre or search_text in codigo):
+                return False
+                
+            # Filtro de categoría
+            if category and category != categoria_valor:
+                return False
+                
+            # Filtro de estado
+            if status and status != estado_valor:
+                return False
+                
+            return True
+        except (AttributeError, IndexError):
+            return True
+
+    def on_search_changed(self, text):
+        """Maneja el cambio en el campo de búsqueda"""
+        self.proxy_model.setFilterWildcard(text)
+        self.proxy_model.invalidateFilter()
+        self.status_bar.showMessage(f"Filtrando productos por: {text}" if text else "Sistema ERP - Módulo de Productos")
+
+    def on_category_changed(self, index):
+        """Maneja el cambio en el filtro de categoría"""
+        self._on_filters_changed()
+
+    def on_status_changed(self, index):
+        """Maneja el cambio en el filtro de estado"""
+        self._on_filters_changed()
+
+    def _on_filters_changed(self):
+        """Se llama cuando cambia estado, para actualizar el filtrado"""
+        self.proxy_model.invalidateFilter()
+        category = self.category_filter.currentData()
+        status = self.status_filter.currentData()
+        
+        msg = "Mostrando productos"
+        if category:
+            msg += f" de categoría: {self.category_filter.currentText()}"
+        if status:
+            msg += f" con estado: {self.status_filter.currentText()}"
+            
+        if not category and not status:
+            msg = "Sistema ERP - Módulo de Productos"
+            
+        self.status_bar.showMessage(msg)
 
     def _connect_signals(self):
         """Conecta todas las señales y slots"""
-        # Señales de UI
-        self.add_action.triggered.connect(self.on_add_product)
-        self.refresh_action.triggered.connect(self.refresh_data)
+        # Conectar botones
+        self.add_btn.clicked.connect(self.on_add_product)
+        self.refresh_btn.clicked.connect(self.refresh_data)
+        
+        # Conectar filtros
         self.search_input.textChanged.connect(self.on_search_changed)
         self.category_filter.currentIndexChanged.connect(self.on_category_changed)
         self.status_filter.currentIndexChanged.connect(self.on_status_changed)
+        
+        # Conectar eventos de tabla
         self.product_table.doubleClicked.connect(self.on_row_double_clicked)
         self.product_table.customContextMenuRequested.connect(self.show_context_menu)
         
@@ -283,32 +322,6 @@ class ProductListView(QWidget):
         
         self.status_bar.showMessage(f"Cargados {total} productos")
 
-    def _filter_accepts_row(self, source_row, source_parent):
-        """Filtrado personalizado para el proxy model"""
-        model = self.product_model
-        search_text = self.search_input.text().lower()
-        
-        # Obtener valores de la fila
-        codigo = model.item(source_row, 1).text().lower()
-        nombre = model.item(source_row, 2).text().lower()
-        categoria = model.item(source_row, 4).text().lower()
-        estado = model.item(source_row, 8).text().lower()
-        descripcion = model.item(source_row, 5).text().lower()
-        
-        # Aplicar filtros
-        if search_text and not (search_text in codigo or search_text in nombre or search_text in descripcion):
-            return False
-            
-        selected_category = self.category_filter.currentData()
-        if selected_category and selected_category != categoria:
-            return False
-            
-        selected_status = self.status_filter.currentData()
-        if selected_status and selected_status != estado:
-            return False
-            
-        return True
-
     def show_context_menu(self, position):
         """Muestra el menú contextual para un producto"""
         index = self.product_table.indexAt(position)
@@ -326,7 +339,6 @@ class ProductListView(QWidget):
         edit_action = menu.addAction(QIcon("resources/icons/edit.png"), "Editar")
         delete_action = menu.addAction(QIcon("resources/icons/delete.png"), "Eliminar")
         menu.addSeparator()
-        
         
         # Conectar acciones
         view_action.triggered.connect(lambda: self.on_view_product(product_id))
@@ -407,34 +419,6 @@ class ProductListView(QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             self.api_client.delete_product(product_id)
             self.status_bar.showMessage(f"Eliminando producto ID: {product_id}...")
-
-
-    def on_view_history(self, product_id):
-        """Muestra el historial de un producto"""
-        # Implementar lógica de historial
-        QMessageBox.information(self, "Historial", f"Mostrando historial del producto ID: {product_id}")
-
-    def on_search_changed(self, text):
-        """Actualiza el filtro de búsqueda"""
-        self.proxy_model.invalidateFilter()
-        if text:
-            self.status_bar.showMessage(f"Filtrando por: '{text}'")
-        else:
-            self.status_bar.showMessage("Listo")
-
-    def on_category_changed(self, index):
-        """Actualiza el filtro de categoría"""
-        category = self.category_filter.currentData()
-        self.current_filters['categoria'] = category if category else None
-        self.proxy_model.invalidateFilter()
-        self.refresh_data()
-
-    def on_status_changed(self, index):
-        """Actualiza el filtro de estado"""
-        status = self.status_filter.currentData()
-        self.current_filters['estado'] = status if status else None
-        self.proxy_model.invalidateFilter()
-        self.refresh_data()
 
     def on_row_double_clicked(self, index):
         """Maneja el doble clic en una fila"""

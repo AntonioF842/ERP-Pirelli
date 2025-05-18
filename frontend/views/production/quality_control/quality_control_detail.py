@@ -1,138 +1,204 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QScrollArea, QPushButton, QGroupBox, QGridLayout,
-                            QMessageBox, QDialog, QFrame)
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QGroupBox, QGridLayout, QTextBrowser,
+    QFrame, QSizePolicy, QMessageBox
+)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap, QIcon
+from utils.theme import Theme
+import logging
+
+logger = logging.getLogger(__name__)
 
 class QualityControlDetailView(QDialog):
     """Vista detallada de un control de calidad"""
     
     # Señales
-    edit_requested = pyqtSignal(dict)
-    delete_requested = pyqtSignal(int)
+    edit_requested = pyqtSignal(dict)  # Emitida al solicitar edición
+    delete_requested = pyqtSignal(int) # Emitida al solicitar eliminación
     
     def __init__(self, api_client, control_data, parent=None):
         super().__init__(parent)
-        from utils.theme import Theme
         Theme.apply_window_light_theme(self)
         
         self.api_client = api_client
         self.control_data = control_data
         
-        self.init_ui()
-    
-    def init_ui(self):
-        """Inicializa la interfaz de usuario"""
-        # Configuración de la ventana
+        self.setup_ui()
+        self.load_data()
+
+    def setup_ui(self):
+        """Configura la interfaz de usuario"""
         self.setWindowTitle(f"Control de Calidad: #{self.control_data.get('id_control', 'Detalle')}")
-        self.setMinimumSize(600, 400)
+        self.setMinimumSize(600, 500)
         
-        # Layout principal
-        main_layout = QVBoxLayout()
-        main_layout.setSpacing(15)
+        main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
         
         # Encabezado
-        header_layout = QHBoxLayout()
+        self.setup_header(main_layout)
         
-        # Icono y Título
-        icon_label = QLabel()
-        icon_pixmap = QPixmap("resources/icons/quality.png")
-        if not icon_pixmap.isNull():
-            icon_label.setPixmap(icon_pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio))
+        # Información principal
+        self.setup_info_section(main_layout)
         
-        title_label = QLabel(f"Control de Calidad #{self.control_data.get('id_control', '')}")
-        title_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        
-        header_layout.addWidget(icon_label)
-        header_layout.addWidget(title_label)
-        header_layout.addStretch()
+        # Observaciones
+        self.setup_observations_section(main_layout)
         
         # Botones de acción
-        action_layout = QHBoxLayout()
+        self.setup_action_buttons(main_layout)
+
+    def setup_header(self, parent_layout):
+        """Configura el encabezado con icono y título"""
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(15)
         
-        edit_button = QPushButton("Editar")
-        edit_button.setIcon(QIcon("resources/icons/edit.png"))
-        edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Icono
+        icon_label = QLabel()
+        icon_pixmap = QPixmap("resources/icons/quality_large.png")
+        if not icon_pixmap.isNull():
+            icon_label.setPixmap(icon_pixmap.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio))
         
-        delete_button = QPushButton("Eliminar")
-        delete_button.setIcon(QIcon("resources/icons/delete.png"))
-        delete_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        delete_button.setStyleSheet("color: #d60000;")
+        # Título y código
+        title_layout = QVBoxLayout()
+        title_layout.setSpacing(5)
         
-        close_button = QPushButton("Cerrar")
-        close_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        title_label = QLabel(f"Control #{self.control_data.get('id_control', 'N/A')}")
+        title_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         
-        action_layout.addWidget(edit_button)
-        action_layout.addWidget(delete_button)
-        action_layout.addStretch()
-        action_layout.addWidget(close_button)
+        op_label = QLabel(f"Orden Producción: {self.control_data.get('id_orden_produccion', 'N/A')}")
+        op_label.setFont(QFont("Arial", 10))
+        op_label.setStyleSheet(f"color: {Theme.SECONDARY_COLOR};")
         
-        # Conectar eventos
-        edit_button.clicked.connect(lambda: self.edit_requested.emit(self.control_data))
-        delete_button.clicked.connect(self.confirm_delete)
-        close_button.clicked.connect(self.close)
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(op_label)
+        title_layout.addStretch()
         
-        # Información del control
+        header_layout.addWidget(icon_label)
+        header_layout.addLayout(title_layout)
+        header_layout.addStretch()
+        
+        parent_layout.addLayout(header_layout)
+
+    def setup_info_section(self, parent_layout):
+        """Configura la sección de información básica"""
         info_group = QGroupBox("Información del Control")
-        info_layout = QGridLayout()
-        
-        # Orden de Producción
-        info_layout.addWidget(QLabel("Orden Producción:"), 0, 0)
-        op_label = QLabel(str(self.control_data.get("id_orden_produccion", "N/A")))
-        op_label.setStyleSheet("font-weight: bold;")
-        info_layout.addWidget(op_label, 0, 1)
+        info_layout = QGridLayout(info_group)
+        info_layout.setVerticalSpacing(10)
+        info_layout.setHorizontalSpacing(20)
         
         # Fecha
-        info_layout.addWidget(QLabel("Fecha:"), 1, 0)
-        fecha_label = QLabel(self.control_data.get("fecha", "N/A"))
+        info_layout.addWidget(QLabel("Fecha:"), 0, 0)
+        fecha_label = QLabel(self.control_data.get('fecha', 'N/A'))
         fecha_label.setStyleSheet("font-weight: bold;")
-        info_layout.addWidget(fecha_label, 1, 1)
+        info_layout.addWidget(fecha_label, 0, 1)
         
         # Resultado
         info_layout.addWidget(QLabel("Resultado:"), 0, 2)
-        resultado = self.control_data.get("resultado", "aprobado")
-        resultado_display = "Aprobado" if resultado == "aprobado" else "Rechazado" if resultado == "rechazado" else "Requiere Reparación"
-        resultado_label = QLabel(resultado_display)
-        resultado_label.setStyleSheet("font-weight: bold; color: #d60000;" if resultado == "rechazado" else "font-weight: bold; color: #00aa00;" if resultado == "aprobado" else "font-weight: bold; color: #ff8c00;")
+        resultado = self.control_data.get('resultado', 'aprobado')
+        resultado_label = QLabel(self.get_result_display(resultado))
+        resultado_label.setStyleSheet(f"font-weight: bold; color: {self.get_result_color(resultado)};")
         info_layout.addWidget(resultado_label, 0, 3)
         
         # Usuario
-        info_layout.addWidget(QLabel("Usuario:"), 1, 2)
-        usuario_label = QLabel(str(self.control_data.get("id_usuario", "N/A")))
+        info_layout.addWidget(QLabel("Usuario:"), 1, 0)
+        usuario_label = QLabel(str(self.control_data.get('id_usuario', 'N/A')))
         usuario_label.setStyleSheet("font-weight: bold;")
-        info_layout.addWidget(usuario_label, 1, 3)
+        info_layout.addWidget(usuario_label, 1, 1)
         
-        # Observaciones
-        info_layout.addWidget(QLabel("Observaciones:"), 2, 0, Qt.AlignmentFlag.AlignTop)
-        obs = self.control_data.get("observaciones", "Sin observaciones")
-        obs_label = QLabel(obs if obs else "Sin observaciones")
-        obs_label.setWordWrap(True)
-        obs_label.setStyleSheet("background-color: #f5f5f5; padding: 10px; border-radius: 5px;")
-        info_layout.addWidget(obs_label, 2, 1, 1, 3)
+        parent_layout.addWidget(info_group)
+
+    def setup_observations_section(self, parent_layout):
+        """Configura la sección de observaciones"""
+        obs_group = QGroupBox("Observaciones")
+        obs_layout = QVBoxLayout(obs_group)
         
-        info_group.setLayout(info_layout)
+        self.obs_browser = QTextBrowser()
+        self.obs_browser.setOpenExternalLinks(True)
+        self.obs_browser.setStyleSheet("""
+            QTextBrowser {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 3px;
+                padding: 10px;
+            }
+        """)
         
-        # Agregar widgets al layout principal
-        main_layout.addLayout(header_layout)
-        main_layout.addWidget(info_group)
-        main_layout.addStretch()
-        main_layout.addLayout(action_layout)
+        obs_layout.addWidget(self.obs_browser)
+        parent_layout.addWidget(obs_group)
+
+    def setup_action_buttons(self, parent_layout):
+        """Configura los botones de acción"""
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
         
-        # Establecer el layout
-        self.setLayout(main_layout)
-    
+        self.edit_btn = QPushButton("Editar")
+        self.edit_btn.setIcon(QIcon("resources/icons/edit.png"))
+        self.edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        self.delete_btn = QPushButton("Eliminar")
+        self.delete_btn.setIcon(QIcon("resources/icons/delete.png"))
+        self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.delete_btn.setStyleSheet(f"color: {Theme.DANGER_COLOR};")
+        
+        self.close_btn = QPushButton("Cerrar")
+        self.close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        button_layout.addWidget(self.edit_btn)
+        button_layout.addWidget(self.delete_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(self.close_btn)
+        
+        parent_layout.addLayout(button_layout)
+        
+        # Conectar señales
+        self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.control_data))
+        self.delete_btn.clicked.connect(self.confirm_delete)
+        self.close_btn.clicked.connect(self.close)
+
+    def load_data(self):
+        """Carga los datos del control en la vista"""
+        observaciones = self.control_data.get('observaciones', 'Sin observaciones disponibles')
+        if not observaciones.strip():
+            observaciones = "Sin observaciones disponibles"
+        
+        # Formatear observaciones como HTML
+        html_obs = f"<p style='margin: 5px; line-height: 1.5;'>{observaciones}</p>"
+        self.obs_browser.setHtml(html_obs)
+
+    def get_result_display(self, result):
+        """Devuelve el texto a mostrar según el resultado"""
+        result = result.lower()
+        if result == "aprobado":
+            return "Aprobado"
+        elif result == "rechazado":
+            return "Rechazado"
+        elif result == "reparacion":
+            return "Requiere Reparación"
+        return result.capitalize()
+
+    def get_result_color(self, result):
+        """Devuelve el color según el resultado"""
+        result = result.lower()
+        if result == "aprobado":
+            return Theme.SUCCESS_COLOR
+        elif result == "rechazado":
+            return Theme.DANGER_COLOR
+        elif result == "reparacion":
+            return Theme.WARNING_COLOR
+        return Theme.PRIMARY_COLOR
+
     def confirm_delete(self):
-        """Solicita confirmación para eliminar el control"""
+        """Confirma la eliminación del control"""
         reply = QMessageBox.question(
             self,
-            "Confirmar eliminación",
-            f"¿Está seguro que desea eliminar el control #{self.control_data.get('id_control')}?",
+            "Confirmar Eliminación",
+            f"¿Está seguro que desea eliminar el control #{self.control_data.get('id_control')}?\n\n"
+            "Esta acción no se puede deshacer.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            # Emitir señal con el ID del control
-            self.delete_requested.emit(self.control_data.get("id_control"))
+            self.delete_requested.emit(self.control_data.get('id_control'))
             self.close()

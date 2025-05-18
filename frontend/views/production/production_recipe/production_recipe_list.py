@@ -31,11 +31,12 @@ class ProductionRecipeListView(QWidget):
             "ID", "Producto", "Material", "Cantidad"
         ])
 
-        # Modelo proxy para filtrado
+        # Modelo proxy para filtrado avanzado
         self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setSourceModel(self.recipe_model)
         self.proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.proxy_model.setFilterKeyColumn(-1)  # Buscar en todas las columnas
+        self.setup_filter_proxy()
 
         self.init_ui()
 
@@ -101,10 +102,44 @@ class ProductionRecipeListView(QWidget):
         
         main_layout.addWidget(self.recipe_table)
 
+        # Barra de resumen
+        summary_layout = QHBoxLayout()
+        self.total_label = QLabel("Total de recetas: <b>0</b>")
+        
+        summary_layout.addWidget(self.total_label)
+        summary_layout.addStretch()
+        main_layout.addLayout(summary_layout)
+
         # Barra de estado
         self.status_bar = QStatusBar()
         self.status_bar.showMessage("Sistema ERP Pirelli - Módulo de Recetas de Producción")
         main_layout.addWidget(self.status_bar)
+
+    def setup_filter_proxy(self):
+        """Configura el modelo proxy para filtrado avanzado"""
+        self.proxy_model.filterAcceptsRow = self._filter_accepts_row
+    
+    def _filter_accepts_row(self, source_row, source_parent):
+        """Método personalizado para determinar si una fila cumple con los filtros"""
+        model = self.recipe_model
+        search_text = self.search_input.text().lower()
+        
+        # Si no hay filtros activos, mostrar todas las filas
+        if not search_text:
+            return True
+            
+        # Obtener valores de la fila actual
+        try:
+            producto = model.item(source_row, 1).text().lower()
+            material = model.item(source_row, 2).text().lower()
+            
+            # Filtro de búsqueda (producto o material)
+            if search_text and not (search_text in producto or search_text in material):
+                return False
+                
+            return True
+        except (AttributeError, IndexError):
+            return True
 
     def on_search_changed(self, text):
         """Maneja el cambio en el campo de búsqueda"""
@@ -123,7 +158,6 @@ class ProductionRecipeListView(QWidget):
 
     def load_recipes(self, recipes):
         """Carga las recetas recibidas en la tabla"""
-        # Limpiar modelo actual
         self.recipe_model.removeRows(0, self.recipe_model.rowCount())
 
         for recipe in recipes:
@@ -153,7 +187,9 @@ class ProductionRecipeListView(QWidget):
 
             self.recipe_model.appendRow(row)
 
-        self.status_bar.showMessage(f"Se han cargado {len(recipes)} recetas")
+        total = len(recipes)
+        self.total_label.setText(f"Total de recetas: <b>{total}</b>")
+        self.status_bar.showMessage(f"Se han cargado {total} recetas")
 
     def on_data_loaded(self, data):
         """Maneja los datos cargados desde la API"""

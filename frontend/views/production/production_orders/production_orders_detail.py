@@ -1,8 +1,14 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QScrollArea, QPushButton, QGroupBox, QGridLayout,
-                            QMessageBox, QDialog, QFrame)
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+    QPushButton, QGroupBox, QGridLayout, QTextBrowser,
+    QFrame, QSizePolicy, QMessageBox
+)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap, QIcon
+from utils.theme import Theme
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ProductionOrderDetailView(QDialog):
     """Vista detallada de una orden de producción"""
@@ -13,69 +19,74 @@ class ProductionOrderDetailView(QDialog):
     
     def __init__(self, api_client, order_data, parent=None):
         super().__init__(parent)
-        from utils.theme import Theme
         Theme.apply_window_light_theme(self)
         
         self.api_client = api_client
         self.order_data = order_data
         
-        self.init_ui()
-    
-    def init_ui(self):
-        """Inicializa la interfaz de usuario"""
-        # Configuración de la ventana
+        self.setup_ui()
+        self.load_data()
+
+    def setup_ui(self):
+        """Configura la interfaz de usuario"""
         self.setWindowTitle(f"Orden de Producción #{self.order_data.get('id_orden_produccion', '')}")
-        self.setMinimumSize(600, 400)
+        self.setMinimumSize(600, 500)
         
-        # Layout principal
-        main_layout = QVBoxLayout()
-        main_layout.setSpacing(15)
+        main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
         
         # Encabezado
-        header_layout = QHBoxLayout()
+        self.setup_header(main_layout)
         
-        # Icono y Título
-        icon_label = QLabel()
-        icon_pixmap = QPixmap("resources/icons/production.png")
-        if not icon_pixmap.isNull():
-            icon_label.setPixmap(icon_pixmap.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio))
+        # Información principal
+        self.setup_info_section(main_layout)
         
-        title_label = QLabel(f"Orden de Producción #{self.order_data.get('id_orden_produccion', '')}")
-        title_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        
-        header_layout.addWidget(icon_label)
-        header_layout.addWidget(title_label)
-        header_layout.addStretch()
+        # Notas/observaciones
+        self.setup_notes_section(main_layout)
         
         # Botones de acción
-        action_layout = QHBoxLayout()
+        self.setup_action_buttons(main_layout)
+
+    def setup_header(self, parent_layout):
+        """Configura el encabezado con icono y título"""
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(15)
         
-        edit_button = QPushButton("Editar")
-        edit_button.setIcon(QIcon("resources/icons/edit.png"))
-        edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Icono
+        icon_label = QLabel()
+        icon_pixmap = QPixmap("resources/icons/production_large.png")
+        if not icon_pixmap.isNull():
+            icon_label.setPixmap(icon_pixmap.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio))
         
-        delete_button = QPushButton("Eliminar")
-        delete_button.setIcon(QIcon("resources/icons/delete.png"))
-        delete_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        delete_button.setStyleSheet("color: #d60000;")
+        # Título y ID
+        title_layout = QVBoxLayout()
+        title_layout.setSpacing(5)
         
-        close_button = QPushButton("Cerrar")
-        close_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        title_label = QLabel(f"Orden de Producción #{self.order_data.get('id_orden_produccion', '')}")
+        title_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         
-        action_layout.addWidget(edit_button)
-        action_layout.addWidget(delete_button)
-        action_layout.addStretch()
-        action_layout.addWidget(close_button)
+        status = self.order_data.get("estado", "planificada")
+        status_label = QLabel(f"Estado: {self.get_status_display(status)}")
+        status_label.setFont(QFont("Arial", 10))
+        status_label.setStyleSheet(f"color: {self.get_status_color(status)};")
         
-        # Conectar eventos
-        edit_button.clicked.connect(lambda: self.edit_requested.emit(self.order_data))
-        delete_button.clicked.connect(self.confirm_delete)
-        close_button.clicked.connect(self.close)
+        title_layout.addWidget(title_label)
+        title_layout.addWidget(status_label)
+        title_layout.addStretch()
         
-        # Información de la orden
+        header_layout.addWidget(icon_label)
+        header_layout.addLayout(title_layout)
+        header_layout.addStretch()
+        
+        parent_layout.addLayout(header_layout)
+
+    def setup_info_section(self, parent_layout):
+        """Configura la sección de información básica"""
         info_group = QGroupBox("Información de la Orden")
-        info_layout = QGridLayout()
+        info_layout = QGridLayout(info_group)
+        info_layout.setVerticalSpacing(10)
+        info_layout.setHorizontalSpacing(20)
         
         # Producto
         info_layout.addWidget(QLabel("Producto:"), 0, 0)
@@ -90,26 +101,18 @@ class ProductionOrderDetailView(QDialog):
         cantidad_label.setStyleSheet("font-weight: bold;")
         info_layout.addWidget(cantidad_label, 1, 1)
         
-        # Estado
-        info_layout.addWidget(QLabel("Estado:"), 1, 2)
-        from models.production_order_model import ProductionOrder
-        estado_display = ProductionOrder.ESTADOS.get(self.order_data.get("estado", ""), "Desconocido")
-        estado_label = QLabel(estado_display)
-        estado_label.setStyleSheet("font-weight: bold;")
-        info_layout.addWidget(estado_label, 1, 3)
-        
-        # Fechas
+        # Fecha Inicio
         info_layout.addWidget(QLabel("Fecha Inicio:"), 2, 0)
         fecha_inicio_label = QLabel(self.order_data.get("fecha_inicio", "N/A"))
         fecha_inicio_label.setStyleSheet("font-weight: bold;")
         info_layout.addWidget(fecha_inicio_label, 2, 1)
         
+        # Fecha Fin
         info_layout.addWidget(QLabel("Fecha Fin:"), 2, 2)
         fecha_fin_label = QLabel(self.order_data.get("fecha_fin", "N/A"))
         fecha_fin_label.setStyleSheet("font-weight: bold;")
         info_layout.addWidget(fecha_fin_label, 2, 3)
         
-        # Responsable
         # Responsable
         info_layout.addWidget(QLabel("Responsable:"), 3, 0)
         usuario_nombre = self.order_data.get("usuario", {}).get("nombre", "N/A") if isinstance(self.order_data.get("usuario"), dict) else "N/A"
@@ -117,35 +120,100 @@ class ProductionOrderDetailView(QDialog):
         responsable_label.setStyleSheet("font-weight: bold;")
         info_layout.addWidget(responsable_label, 3, 1)
         
-        # Notas
-        info_layout.addWidget(QLabel("Notas:"), 4, 0, Qt.AlignmentFlag.AlignTop)
-        notas_label = QLabel(self.order_data.get("notas", "Sin notas"))
-        notas_label.setWordWrap(True)
-        notas_label.setStyleSheet("background-color: #f5f5f5; padding: 10px; border-radius: 5px;")
-        info_layout.addWidget(notas_label, 4, 1, 1, 3)
+        parent_layout.addWidget(info_group)
+
+    def setup_notes_section(self, parent_layout):
+        """Configura la sección de notas/observaciones"""
+        notes_group = QGroupBox("Notas y Observaciones")
+        notes_layout = QVBoxLayout(notes_group)
         
-        info_group.setLayout(info_layout)
+        self.notes_browser = QTextBrowser()
+        self.notes_browser.setOpenExternalLinks(True)
+        self.notes_browser.setStyleSheet("""
+            QTextBrowser {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 3px;
+                padding: 10px;
+            }
+        """)
         
-        # Agregar widgets al layout principal
-        main_layout.addLayout(header_layout)
-        main_layout.addWidget(info_group)
-        main_layout.addStretch()
-        main_layout.addLayout(action_layout)
+        notes_layout.addWidget(self.notes_browser)
+        parent_layout.addWidget(notes_group)
+
+    def setup_action_buttons(self, parent_layout):
+        """Configura los botones de acción"""
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
         
-        # Establecer el layout
-        self.setLayout(main_layout)
-    
+        self.edit_btn = QPushButton("Editar")
+        self.edit_btn.setIcon(QIcon("resources/icons/edit.png"))
+        self.edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        self.delete_btn = QPushButton("Eliminar")
+        self.delete_btn.setIcon(QIcon("resources/icons/delete.png"))
+        self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.delete_btn.setStyleSheet(f"color: {Theme.DANGER_COLOR};")
+        
+        self.close_btn = QPushButton("Cerrar")
+        self.close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        button_layout.addWidget(self.edit_btn)
+        button_layout.addWidget(self.delete_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(self.close_btn)
+        
+        parent_layout.addLayout(button_layout)
+        
+        # Conectar señales
+        self.edit_btn.clicked.connect(lambda: self.edit_requested.emit(self.order_data))
+        self.delete_btn.clicked.connect(self.confirm_delete)
+        self.close_btn.clicked.connect(self.close)
+
+    def load_data(self):
+        """Carga los datos de la orden en la vista"""
+        notas = self.order_data.get("notas", "Sin notas disponibles")
+        if not notas.strip():
+            notas = "Sin notas disponibles"
+        
+        # Formatear notas como HTML
+        html_notes = f"<p style='margin: 5px; line-height: 1.5;'>{notas}</p>"
+        self.notes_browser.setHtml(html_notes)
+
+    def get_status_display(self, status):
+        """Devuelve el nombre legible del estado"""
+        status_map = {
+            "planificada": "Planificada",
+            "en_proceso": "En Proceso",
+            "completada": "Completada",
+            "cancelada": "Cancelada"
+        }
+        return status_map.get(status, "Desconocido")
+
+    def get_status_color(self, status):
+        """Devuelve el color según el estado"""
+        status = status.lower()
+        if status == "planificada":
+            return Theme.INFO_COLOR
+        elif status == "en_proceso":
+            return Theme.WARNING_COLOR
+        elif status == "completada":
+            return Theme.SUCCESS_COLOR
+        elif status == "cancelada":
+            return Theme.DANGER_COLOR
+        return Theme.PRIMARY_COLOR
+
     def confirm_delete(self):
-        """Solicita confirmación para eliminar la orden"""
+        """Confirma la eliminación de la orden"""
         reply = QMessageBox.question(
             self,
-            "Confirmar eliminación",
-            f"¿Está seguro que desea eliminar la orden #{self.order_data.get('id_orden_produccion')}?",
+            "Confirmar Eliminación",
+            f"¿Está seguro que desea eliminar la orden #{self.order_data.get('id_orden_produccion')}?\n\n"
+            "Esta acción no se puede deshacer.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            # Emitir señal con el ID de la orden
             self.delete_requested.emit(self.order_data.get("id_orden_produccion"))
             self.close()
