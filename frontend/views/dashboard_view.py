@@ -4,15 +4,49 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect, QSpacerItem, QDialog, QToolTip,
     QTableWidget, QTableWidgetItem, QHeaderView
 )
+from datetime import datetime
+import locale
 from PyQt6.QtCore import Qt, QSize, pyqtSignal, QPropertyAnimation, QEasingCurve, QPoint, QTimer
 from PyQt6.QtGui import QFont, QIcon, QPainter, QColor, QLinearGradient, QPalette, QBrush, QPixmap
 from PyQt6.QtCharts import QChart, QChartView, QPieSeries, QBarSeries, QBarSet, QBarCategoryAxis, QValueAxis
 import logging
 
-# Configuración básica de logging: solo errores y advertencias
+# Basic logging configuration: only errors and warnings
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(levelname)s %(message)s')
 
-# Colores de Pirelli mejorados
+# Function to get formatted date and time in Spanish
+def get_formatted_date():
+    """Gets the current date formatted in Spanish"""
+    now = datetime.now()
+    
+    # Try to use locale first
+    try:
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # For Linux/Mac
+        date = now.strftime("%d de %B, %Y")
+        time = now.strftime("%H:%M")
+    except:
+        try:
+            locale.setlocale(locale.LC_TIME, 'Spanish_Spain.1252')  # For Windows
+            date = now.strftime("%d de %B, %Y")
+            time = now.strftime("%H:%M")
+        except:
+            # Manual approach if locale fails
+            months = {
+                1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+                5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+                9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+            }
+            
+            day = now.day
+            month = months[now.month]
+            year = now.year
+            time = f"{now.hour:02d}:{now.minute:02d}"
+            
+            date = f"{day} de {month}, {year}"
+    
+    return date, time
+
+# Improved Pirelli colors
 PIRELLI_RED = "#D50000"
 PIRELLI_RED_LIGHT = "#FF5252"
 PIRELLI_RED_DARK = "#B71C1C"
@@ -22,11 +56,11 @@ PIRELLI_DARK = "#1A1A1A"
 PIRELLI_DARK_LIGHT = "#424242"
 PIRELLI_GRAY = "#666666"
 PIRELLI_LIGHT_GRAY = "#E6E6E6"
-CARD_BG = "#FFFFFF"  # Fondo más claro para tarjetas
-CARD_BORDER = "#EEEEEE"  # Borde sutil para tarjetas
+CARD_BG = "#FFFFFF"  # Lighter background for cards
+CARD_BORDER = "#EEEEEE"  # Subtle border for cards
 
 class AnimatedFrame(QFrame):
-    """Frame con animación de hover"""
+    """Frame with hover animation"""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
@@ -54,11 +88,9 @@ class AnimatedFrame(QFrame):
         super().leaveEvent(event)
 
 class StatisticCard(AnimatedFrame):
-    """Tarjeta para mostrar una estadística con mejor visual según estética Pirelli"""
+    """Card to display a statistic with improved Pirelli visual style"""
     def __init__(self, title, value, icon_path=None, color=PIRELLI_RED):
         super().__init__()
-        from utils.theme import Theme
-        Theme.apply_window_light_theme(self)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setStyleSheet(f"""
             QFrame {{
@@ -67,7 +99,7 @@ class StatisticCard(AnimatedFrame):
                 border: 1px solid {CARD_BORDER};
             }}
         """)
-        # Sombra
+        # Shadow
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(15)
         shadow.setOffset(0, 3)
@@ -76,7 +108,7 @@ class StatisticCard(AnimatedFrame):
         # Layout
         layout = QHBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
-        # Icono circular
+        # Circular icon
         if icon_path:
             icon_label = QLabel()
             pixmap = QIcon(icon_path).pixmap(QSize(42, 42))
@@ -89,7 +121,7 @@ class StatisticCard(AnimatedFrame):
                 padding: 10px;
             """)
             layout.addWidget(icon_label)
-        # Contenido
+        # Content
         text_layout = QVBoxLayout()
         text_layout.setSpacing(8)
         title_label = QLabel(title)
@@ -106,18 +138,18 @@ class StatisticCard(AnimatedFrame):
         self.setMinimumHeight(130)
 
 class SalesVsProductionDialog(QDialog):
-    """Diálogo para mostrar el gráfico de ventas vs producción en grande y tabla detallada."""
+    """Dialog to show sales vs production chart in detail with data table"""
     def __init__(self, data, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Detalle de Ventas vs Producción")
-        self.setMinimumSize(1000, 700)  # Aumentar tamaño mínimo
-        self.resize(1100, 800)  # Establecer un tamaño inicial más grande
+        self.setWindowTitle("Sales vs Production Details")
+        self.setMinimumSize(1000, 700)  # Increase minimum size
+        self.resize(1100, 800)  # Set a larger initial size
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(20)
 
-        # Título con estilo
-        title_label = QLabel("Comparación Detallada Ventas vs Producción")
+        # Title with style
+        title_label = QLabel("Detailed Sales vs Production Comparison")
         title_label.setStyleSheet(f"""
             font-family: 'Segoe UI';
             font-size: 22px;
@@ -127,7 +159,7 @@ class SalesVsProductionDialog(QDialog):
         """)
         layout.addWidget(title_label)
 
-        # Gráfico grande
+        # Large chart
         chart = QChart()
         chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
         chart.setTheme(QChart.ChartTheme.ChartThemeLight)
@@ -140,8 +172,8 @@ class SalesVsProductionDialog(QDialog):
         produccion = [float(p) if p else 0 for p in data.get("produccion", [])]
         categorias = data.get("categorias", [f"Item {i+1}" for i in range(max(len(ventas), len(produccion)))])
 
-        set0 = QBarSet("Ventas")
-        set1 = QBarSet("Producción")
+        set0 = QBarSet("Sales")
+        set1 = QBarSet("Production")
         set0.setColor(QColor(PIRELLI_RED))
         set1.setColor(QColor(PIRELLI_DARK))
         set0.append(ventas)
@@ -168,7 +200,7 @@ class SalesVsProductionDialog(QDialog):
         chart_view.setMinimumHeight(350)
         layout.addWidget(chart_view)
 
-        # Tabla detallada
+        # Detailed table
         table_frame = QFrame()
         table_frame.setStyleSheet(f"""
             QFrame {{
@@ -180,19 +212,19 @@ class SalesVsProductionDialog(QDialog):
         table_layout = QVBoxLayout(table_frame)
         table_layout.setContentsMargins(20, 20, 20, 20)
         
-        table_title = QLabel("Detalle numérico de ventas y producción")
+        table_title = QLabel("Numerical details of sales and production")
         table_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         table_title.setStyleSheet(f"color: {PIRELLI_DARK}; margin-bottom: 10px;")
         table_layout.addWidget(table_title)
         
         table = QTableWidget()
         table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(["Categoría", "Ventas", "Producción"])
+        table.setHorizontalHeaderLabels(["Category", "Sales", "Production"])
         table.setRowCount(len(categorias))
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         table.setAlternatingRowColors(True)
-        table.setMinimumHeight(300)  # Altura mínima para la tabla
+        table.setMinimumHeight(300)  # Minimum height for the table
         table.setStyleSheet("""
             QTableWidget {
                 background-color: #FFFFFF;
@@ -228,8 +260,8 @@ class SalesVsProductionDialog(QDialog):
         table_layout.addWidget(table)
         layout.addWidget(table_frame)
 
-        # Botón de cerrar
-        close_button = QPushButton("Cerrar")
+        # Close button
+        close_button = QPushButton("Close")
         close_button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {PIRELLI_DARK};
@@ -252,18 +284,18 @@ class SalesVsProductionDialog(QDialog):
         layout.addLayout(button_layout)
 
 class MaterialDistributionDialog(QDialog):
-    """Diálogo para mostrar la distribución de materiales en grande y detallado, con tabla."""
+    """Dialog to show material distribution in detail with data table"""
     def __init__(self, data, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Detalle de Distribución de Materiales")
-        self.setMinimumSize(900, 700)  # Aumentar tamaño mínimo
-        self.resize(1000, 800)  # Establecer un tamaño inicial más grande
+        self.setWindowTitle("Material Distribution Details")
+        self.setMinimumSize(900, 700)  # Increase minimum size
+        self.resize(1000, 800)  # Set a larger initial size
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(20)
         
-        # Título con estilo
-        title_label = QLabel("Distribución Detallada de Materiales")
+        # Title with style
+        title_label = QLabel("Detailed Material Distribution")
         title_label.setStyleSheet(f"""
             font-family: 'Segoe UI';
             font-size: 22px;
@@ -273,7 +305,7 @@ class MaterialDistributionDialog(QDialog):
         """)
         layout.addWidget(title_label)
         
-        # Gráfico grande
+        # Large chart
         chart = QChart()
         chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
         chart.setTheme(QChart.ChartTheme.ChartThemeLight)
@@ -284,7 +316,7 @@ class MaterialDistributionDialog(QDialog):
         series = QPieSeries()
         total = sum(float(v) for v in data.values() if v)
         
-        # Colores para el gráfico
+        # Colors for the chart
         colors = [
             PIRELLI_RED, 
             PIRELLI_DARK, 
@@ -310,7 +342,7 @@ class MaterialDistributionDialog(QDialog):
         chart_view.setMinimumHeight(350)
         layout.addWidget(chart_view)
         
-        # Tabla detallada
+        # Detailed table
         table_frame = QFrame()
         table_frame.setStyleSheet(f"""
             QFrame {{
@@ -322,19 +354,19 @@ class MaterialDistributionDialog(QDialog):
         table_layout = QVBoxLayout(table_frame)
         table_layout.setContentsMargins(20, 20, 20, 20)
         
-        table_title = QLabel("Detalle numérico de la distribución de materiales")
+        table_title = QLabel("Numerical details of material distribution")
         table_title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
         table_title.setStyleSheet(f"color: {PIRELLI_DARK}; margin-bottom: 10px;")
         table_layout.addWidget(table_title)
         
         table = QTableWidget()
         table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(["Material", "Valor", "Porcentaje"])
+        table.setHorizontalHeaderLabels(["Material", "Value", "Percentage"])
         table.setRowCount(len(data))
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         table.setAlternatingRowColors(True)
-        table.setMinimumHeight(300)  # Altura mínima para la tabla
+        table.setMinimumHeight(300)  # Minimum height for the table
         table.setStyleSheet("""
             QTableWidget {
                 background-color: #FFFFFF;
@@ -368,8 +400,8 @@ class MaterialDistributionDialog(QDialog):
         table_layout.addWidget(table)
         layout.addWidget(table_frame)
         
-        # Botón de cerrar
-        close_button = QPushButton("Cerrar")
+        # Close button
+        close_button = QPushButton("Close")
         close_button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {PIRELLI_DARK};
@@ -392,7 +424,7 @@ class MaterialDistributionDialog(QDialog):
         layout.addLayout(button_layout)
 
 class ChartCard(AnimatedFrame):
-    """Tarjeta para mostrar un gráfico con estilo Pirelli e interacción avanzada"""
+    """Card to display a chart with Pirelli style and advanced interaction"""
     def __init__(self, title, chart_type="pie"):
         super().__init__()
         self.setFrameShape(QFrame.Shape.NoFrame)
@@ -403,7 +435,7 @@ class ChartCard(AnimatedFrame):
                 border: 1px solid {CARD_BORDER};
             }}
         """)
-        # Sombra
+        # Shadow
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(15)
         shadow.setOffset(0, 3)
@@ -412,13 +444,13 @@ class ChartCard(AnimatedFrame):
         # Layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
-        # Título
+        # Title
         title_layout = QHBoxLayout()
         title_label = QLabel(title)
         title_label.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 18px; font-weight: bold; font-family: 'Segoe UI';")
         title_layout.addWidget(title_label)
         
-        # Botón de expandir
+        # Expand button
         expand_btn = QPushButton()
         expand_btn.setIcon(QIcon("resources/icons/expand.png"))
         expand_btn.setFixedSize(28, 28)
@@ -435,13 +467,13 @@ class ChartCard(AnimatedFrame):
         title_layout.addWidget(expand_btn)
         layout.addLayout(title_layout)
         
-        # Separador
+        # Separator
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setStyleSheet(f"background-color: {CARD_BORDER}; margin: 8px 0;")
         layout.addWidget(separator)
         
-        # Crear el gráfico
+        # Create the chart
         self.chart = QChart()
         self.chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
         self.chart.setTheme(QChart.ChartTheme.ChartThemeLight)
@@ -449,28 +481,28 @@ class ChartCard(AnimatedFrame):
         self.chart.legend().setVisible(True)
         self.chart.legend().setAlignment(Qt.AlignmentFlag.AlignBottom)
         self.chart.legend().setFont(QFont("Segoe UI", 10))
-        # Crear vista del gráfico
+        # Create chart view
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         layout.addWidget(self.chart_view)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        # Propiedades para interactividad
+        # Properties for interactivity
         self.chart_type = chart_type
-        self.material_data = None  # Para guardar los datos actuales
+        self.material_data = None  # To store current data
         self.series = None
-        # Agregar datos de prueba según el tipo de gráfico
+        # Add test data based on chart type
         if chart_type == "pie":
             self.create_pie_chart()
             expand_btn.clicked.connect(self.on_expand_pie_clicked)
         elif chart_type == "bar":
             self.create_bar_chart()
             expand_btn.clicked.connect(self.on_expand_bar_clicked)
-        # Eventos para interacción
+        # Events for interaction
         self.chart_view.setMouseTracking(True)
         self.chart_view.viewport().installEventFilter(self)
 
     def create_pie_chart(self, data=None):
-        """Crea un gráfico de pastel con datos reales o de prueba y colores de Pirelli"""
+        """Creates a pie chart with real or test data and Pirelli colors"""
         self.chart.removeAllSeries()
         series = QPieSeries()
         if data:
@@ -480,19 +512,19 @@ class ChartCard(AnimatedFrame):
             for i, (material, valor) in enumerate(data.items()):
                 val = float(valor)
                 slice = series.append(material, val)
-                # Colores de marca Pirelli
+                # Pirelli brand colors
                 color_idx = i % len(colors)
                 slice.setBrush(QColor(colors[color_idx]))
                 if i == 0:
                     slice.setExploded(True)
                     slice.setLabelVisible(True)
         else:
-            # Datos de prueba
-            series.append("Caucho", 35)
-            series.append("Acero", 20)
-            series.append("Químicos", 15)
-            series.append("Otros", 30)
-            # Colores de marca Pirelli
+            # Test data
+            series.append("Rubber", 35)
+            series.append("Steel", 20)
+            series.append("Chemicals", 15)
+            series.append("Others", 30)
+            # Pirelli brand colors
             slices = series.slices()
             if len(slices) > 0:
                 slices[0].setBrush(QColor(PIRELLI_RED))
@@ -507,18 +539,18 @@ class ChartCard(AnimatedFrame):
         self.chart.addSeries(series)
         self.series = series
         self.chart.setTitle("")
-        # Conectar eventos
+        # Connect events
         for slice in series.slices():
-            # PyQt6: hovered signal pasa (bool) pero necesitamos saber el slice, así que usamos lambda
+            # PyQt6: hovered signal passes (bool) but we need to know the slice, so use lambda
             slice.hovered.connect(lambda state, s=slice: self.on_slice_hovered(state, s))
             slice.clicked.connect(self.on_slice_clicked)
 
     def eventFilter(self, obj, event):
-        # Permite que el gráfico reciba eventos de mouse
+        # Allows the chart to receive mouse events
         return super().eventFilter(obj, event)
 
     def on_slice_hovered(self, state, slice):
-        # Mostrar tooltip detallado al pasar el mouse
+        # Show detailed tooltip on mouse hover
         if state:
             label = slice.label()
             value = slice.value()
@@ -526,14 +558,14 @@ class ChartCard(AnimatedFrame):
             QToolTip.showText(self.chart_view.mapToGlobal(self.chart_view.cursor().pos()),
                 f"<div style='background-color: white; padding: 8px; border-radius: 6px; border: 1px solid #ddd;'>"
                 f"<b style='color: {PIRELLI_DARK}; font-size: 14px;'>{label}</b><br>"
-                f"<span style='color: {PIRELLI_GRAY};'>Valor: {value}</span><br>"
-                f"<span style='color: {PIRELLI_RED}; font-weight: bold;'>Porcentaje: {percent:.1f}%</span>"
+                f"<span style='color: {PIRELLI_GRAY};'>Value: {value}</span><br>"
+                f"<span style='color: {PIRELLI_RED}; font-weight: bold;'>Percentage: {percent:.1f}%</span>"
                 f"</div>")
         else:
             QToolTip.hideText()
 
     def on_slice_clicked(self):
-        # Mostrar diálogo ampliado al hacer clic
+        # Show expanded dialog on click
         self.on_expand_pie_clicked()
 
     def on_expand_pie_clicked(self):
@@ -542,7 +574,7 @@ class ChartCard(AnimatedFrame):
             dlg.exec()
 
     def create_bar_chart(self, data=None):
-        """Crea un gráfico de barras con datos reales o de prueba y colores de Pirelli"""
+        """Creates a bar chart with real or test data and Pirelli colors"""
         self.chart.removeAllSeries()
         if data:
             ventas = [float(v) if v else 0 for v in data.get("ventas", [])]
@@ -551,10 +583,10 @@ class ChartCard(AnimatedFrame):
         else:
             ventas = [50, 65, 70, 85, 60]
             produccion = [40, 55, 65, 70, 55]
-            categorias = ["Ene", "Feb", "Mar", "Abr", "May"]
+            categorias = ["Jan", "Feb", "Mar", "Apr", "May"]
 
-        set0 = QBarSet("Ventas")
-        set1 = QBarSet("Producción")
+        set0 = QBarSet("Sales")
+        set1 = QBarSet("Production")
         set0.setColor(QColor(PIRELLI_RED))
         set1.setColor(QColor(PIRELLI_DARK))
         set0.append(ventas)
@@ -577,18 +609,18 @@ class ChartCard(AnimatedFrame):
         series.attachAxis(axis_y)
         self.chart.setTitle("")
         
-        # Guardar los datos para el diálogo detallado
+        # Save data for detailed dialog
         self.bar_data = {
             "ventas": ventas,
             "produccion": produccion,
             "categorias": categorias
         }
         
-        # Conectar evento de clic en la vista del gráfico
+        # Connect click event on chart view
         self.chart_view.mousePressEvent = self.on_bar_chart_clicked
         
     def on_bar_chart_clicked(self, event):
-        # Mostrar diálogo ampliado al hacer clic en el gráfico de barras
+        # Show expanded dialog on chart click
         self.on_expand_bar_clicked()
         
     def on_expand_bar_clicked(self):
@@ -597,9 +629,9 @@ class ChartCard(AnimatedFrame):
             dlg.exec()
 
 class AttendancePieChart(ChartCard):
-    """Gráfico de pastel para mostrar asistencias"""
+    """Pie chart to show attendance"""
     def __init__(self):
-        super().__init__("Asistencia del Mes", "pie")
+        super().__init__("Monthly Attendance", "pie")
         
     def update_data(self, data):
         series = QPieSeries()
@@ -608,30 +640,30 @@ class AttendancePieChart(ChartCard):
         late = data.get("tardanza", 0)
         
         if present > 0:
-            slice = series.append("Presentes", present)
-            slice.setColor(QColor("#4CAF50"))  # Verde
+            slice = series.append("Present", present)
+            slice.setColor(QColor("#4CAF50"))  # Green
             slice.setLabelVisible(True)
             slice.setExploded(True)
         
         if absent > 0:
-            slice = series.append("Ausentes", absent)
-            slice.setColor(QColor("#F44336"))  # Rojo
+            slice = series.append("Absent", absent)
+            slice.setColor(QColor("#F44336"))  # Red
         
         if late > 0:
-            slice = series.append("Tardanzas", late)
-            slice.setColor(QColor("#FFC107"))  # Amarillo
+            slice = series.append("Late", late)
+            slice.setColor(QColor("#FFC107"))  # Yellow
         
         self.chart.removeAllSeries()
         self.chart.addSeries(series)
         
-        # Conectar eventos
+        # Connect events
         for slice in series.slices():
             slice.hovered.connect(lambda state, s=slice: self.on_slice_hovered(state, s))
 
 class TopProductsChart(ChartCard):
-    """Gráfico de barras para productos más vendidos"""
+    """Bar chart for top selling products"""
     def __init__(self):
-        super().__init__("Productos Más Vendidos", "bar")
+        super().__init__("Top Selling Products", "bar")
         
     def update_data(self, data):
         self.chart.removeAllSeries()
@@ -639,7 +671,7 @@ class TopProductsChart(ChartCard):
         if not data:
             return
             
-        set0 = QBarSet("Ventas")
+        set0 = QBarSet("Sales")
         set0.setColor(QColor(PIRELLI_RED))
         
         categories = []
@@ -664,9 +696,9 @@ class TopProductsChart(ChartCard):
         series.attachAxis(axis_y)
 
 class AssetsStatusChart(ChartCard):
-    """Gráfico de estado de activos"""
+    """Pie chart for assets status"""
     def __init__(self):
-        super().__init__("Estado de Activos", "pie")
+        super().__init__("Assets Status", "pie")
         
     def update_data(self, data):
         series = QPieSeries()
@@ -678,13 +710,13 @@ class AssetsStatusChart(ChartCard):
             if cantidad > 0:
                 slice = series.append(estado.capitalize(), cantidad)
                 
-                # Asignar colores según estado
+                # Assign colors based on status
                 if estado == "operativo":
-                    slice.setColor(QColor("#4CAF50"))  # Verde
+                    slice.setColor(QColor("#4CAF50"))  # Green
                 elif estado == "mantenimiento":
-                    slice.setColor(QColor("#FF9800"))  # Naranja
+                    slice.setColor(QColor("#FF9800"))  # Orange
                 else:  # baja
-                    slice.setColor(QColor("#F44336"))  # Rojo
+                    slice.setColor(QColor("#F44336"))  # Red
                 
                 if estado == "operativo":
                     slice.setLabelVisible(True)
@@ -693,22 +725,22 @@ class AssetsStatusChart(ChartCard):
         self.chart.removeAllSeries()
         self.chart.addSeries(series)
         
-        # Conectar eventos
+        # Connect events
         for slice in series.slices():
             slice.hovered.connect(lambda state, s=slice: self.on_slice_hovered(state, s))
 
 class IncidentsTable(QTableWidget):
-    """Tabla para mostrar incidentes recientes"""
+    """Table to display recent incidents"""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setColumnCount(4)
-        self.setHorizontalHeaderLabels(["ID", "Tipo", "Fecha", "Estado"])
+        self.setHorizontalHeaderLabels(["ID", "Type", "Date", "Status"])
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.verticalHeader().setVisible(False)
         self.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         self.setAlternatingRowColors(True)
-        self.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)  # Scroll suave
+        self.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)  # Smooth scrolling
         self.setStyleSheet("""
             QTableWidget {
                 background-color: #FFFFFF;
@@ -765,7 +797,7 @@ class IncidentsTable(QTableWidget):
             self.setItem(row, 3, status_item)
 
 class DashboardView(QWidget):
-    """Vista del dashboard con estilo Pirelli"""
+    """Dashboard view with Pirelli style"""
     refresh_requested = pyqtSignal()
 
     def __init__(self, api_client):
@@ -777,11 +809,11 @@ class DashboardView(QWidget):
             self.init_ui()
             self.refresh_data()
         except Exception as e:
-            logging.exception("Error en DashboardView.__init__")
-            self.show_error_message("Error crítico al inicializar el dashboard", str(e))
+            logging.exception("Error in DashboardView.__init__")
+            self.show_error_message("Critical error initializing dashboard", str(e))
 
     def init_ui(self):
-        """Inicializa la interfaz de usuario con estilo Pirelli mejorado"""
+        """Initializes the UI with improved Pirelli style"""
         main_container = QWidget()
         main_container.setStyleSheet(f"""
             QWidget {{
@@ -821,9 +853,9 @@ class DashboardView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(scroll_area)
 
-        # Banner Superior con Logo Pirelli
+        # Top Banner with Pirelli Logo
         banner_frame = QFrame()
-        # Gradiente para el banner
+        # Gradient for the banner
         banner_frame.setStyleSheet(f"""
             QFrame {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {PIRELLI_DARK}, stop:1 {PIRELLI_DARK_LIGHT});
@@ -834,7 +866,7 @@ class DashboardView(QWidget):
         banner_layout = QHBoxLayout(banner_frame)
         banner_layout.setContentsMargins(36, 24, 36, 24)
         
-        # Logo con efecto de sombra
+        # Logo with shadow effect
         logo_frame = QFrame()
         logo_frame.setFixedSize(180, 60)
         logo_frame.setStyleSheet(f"""
@@ -855,7 +887,7 @@ class DashboardView(QWidget):
         """)
         logo_layout.addWidget(logo_label)
         
-        # Sombra para el logo
+        # Shadow for the logo
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(20)
         shadow.setOffset(0, 5)
@@ -865,17 +897,17 @@ class DashboardView(QWidget):
         banner_layout.addWidget(logo_frame)
         
         title_box = QVBoxLayout()
-        title_label = QLabel("Panel de Control")
+        title_label = QLabel("Dashboard")
         title_label.setFont(QFont("Segoe UI", 26, QFont.Weight.Bold))
         title_label.setStyleSheet("color: white;")
-        subtitle_label = QLabel("Sistema de Gestión Empresarial")
+        subtitle_label = QLabel("Enterprise Management System")
         subtitle_label.setStyleSheet("color: #e0e0e0; font-size: 15px;")
         title_box.addWidget(title_label)
         title_box.addWidget(subtitle_label)
         banner_layout.addLayout(title_box)
         banner_layout.addStretch()
         
-        # Fecha con mejor formato
+        # Date with better format
         date_frame = QFrame()
         date_frame.setStyleSheet(f"""
             QFrame {{
@@ -887,22 +919,28 @@ class DashboardView(QWidget):
         date_layout = QVBoxLayout(date_frame)
         date_layout.setContentsMargins(12, 8, 12, 8)
         
-        date_label = QLabel("15 de Abril, 2025")
-        date_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        time_label = QLabel("10:30 AM")
-        time_label.setStyleSheet("color: #e0e0e0; font-size: 14px;")
-        
-        date_layout.addWidget(date_label)
-        date_layout.addWidget(time_label)
+        fecha_actual, hora_actual = get_formatted_date()
+        self.date_label = QLabel(fecha_actual)
+        self.date_label.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        self.time_label = QLabel(hora_actual)
+        self.time_label.setStyleSheet("color: #e0e0e0; font-size: 14px;")
+
+        # Timer to update time every minute
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_time)
+        self.timer.start(60000)  # 60000 ms = 1 minute
+
+        date_layout.addWidget(self.date_label)
+        date_layout.addWidget(self.time_label)
         
         banner_layout.addWidget(date_frame)
         self.main_layout.addWidget(banner_frame)
 
-        # Botón de Actualizar mejorado y otros controles
+        # Improved Refresh Button and other controls
         controls_layout = QHBoxLayout()
         controls_layout.setContentsMargins(0, 10, 0, 10)
         
-        # Período con mejor estilo
+        # Period with better style
         period_frame = QFrame()
         period_frame.setStyleSheet(f"""
             QFrame {{
@@ -918,15 +956,15 @@ class DashboardView(QWidget):
         period_icon.setPixmap(QIcon("resources/icons/calendar.png").pixmap(QSize(20, 20)))
         period_layout.addWidget(period_icon)
         
-        period_label = QLabel("Período actual: Q2 2025")
+        period_label = QLabel("Current period: Q2 2025")
         period_label.setStyleSheet(f"color: {PIRELLI_DARK}; font-weight: bold; font-size: 14px;")
         period_layout.addWidget(period_label)
         
         controls_layout.addWidget(period_frame)
         controls_layout.addStretch()
         
-        # Botón de actualizar mejorado
-        self.refresh_button = QPushButton(" Actualizar Dashboard")
+        # Improved refresh button
+        self.refresh_button = QPushButton(" Refresh Dashboard")
         self.refresh_button.setObjectName("refresh_button")
         self.refresh_button.setIcon(QIcon("resources/icons/refresh.png"))
         self.refresh_button.clicked.connect(self.refresh_data)
@@ -950,34 +988,34 @@ class DashboardView(QWidget):
         controls_layout.addWidget(self.refresh_button)
         self.main_layout.addLayout(controls_layout)
 
-        # Secciones principales
+        # Main sections
         self.create_statistic_cards()
         self.create_chart_cards()
         
-        # Sección de Personal y Asistencia
-        personal_title = QLabel("Gestión de Personal")
-        personal_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 22px; font-weight: bold; margin-top: 20px; margin-bottom: 10px;")
-        self.main_layout.addWidget(personal_title)
+        # HR and Attendance Section
+        hr_title = QLabel("Human Resources Management")
+        hr_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 22px; font-weight: bold; margin-top: 20px; margin-bottom: 10px;")
+        self.main_layout.addWidget(hr_title)
         
-        personal_layout = QHBoxLayout()
-        personal_layout.setSpacing(24)
+        hr_layout = QHBoxLayout()
+        hr_layout.setSpacing(24)
         
         self.attendance_chart = AttendancePieChart()
-        personal_layout.addWidget(self.attendance_chart)
+        hr_layout.addWidget(self.attendance_chart)
         
-        # Tarjeta de órdenes de compra pendientes
+        # Pending purchase orders card
         self.pending_orders_card = StatisticCard(
-            "Órdenes Compra Pendientes",
+            "Pending Purchase Orders",
             "0",
             "resources/icons/purchase.png",
             PIRELLI_YELLOW
         )
-        personal_layout.addWidget(self.pending_orders_card)
+        hr_layout.addWidget(self.pending_orders_card)
         
-        self.main_layout.addLayout(personal_layout)
+        self.main_layout.addLayout(hr_layout)
         
-        # Sección de Productos y Ventas
-        products_title = QLabel("Productos y Ventas")
+        # Products and Sales Section
+        products_title = QLabel("Products and Sales")
         products_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 22px; font-weight: bold; margin-top: 20px; margin-bottom: 10px;")
         self.main_layout.addWidget(products_title)
         
@@ -989,22 +1027,22 @@ class DashboardView(QWidget):
         
         self.main_layout.addLayout(products_layout)
         
-        # Sección de Activos e Incidentes
-        assets_title = QLabel("Activos e Incidentes")
+        # Assets and Incidents Section
+        assets_title = QLabel("Assets and Incidents")
         assets_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 22px; font-weight: bold; margin-top: 20px; margin-bottom: 10px;")
         self.main_layout.addWidget(assets_title)
         
         assets_layout = QVBoxLayout()
         assets_layout.setSpacing(24)
         
-        # Gráfico de estado de activos
+        # Assets status chart
         assets_chart_layout = QHBoxLayout()
         assets_chart_layout.setSpacing(24)
         self.assets_chart = AssetsStatusChart()
         assets_chart_layout.addWidget(self.assets_chart)
         assets_layout.addLayout(assets_chart_layout)
         
-        # Tabla de incidentes en un marco con estilo
+        # Incidents table in a styled frame
         incidents_frame = QFrame()
         incidents_frame.setStyleSheet(f"""
             QFrame {{
@@ -1023,11 +1061,11 @@ class DashboardView(QWidget):
         incidents_layout.setContentsMargins(24, 24, 24, 24)
         
         incidents_header = QHBoxLayout()
-        incidents_label = QLabel("Incidentes Recientes")
+        incidents_label = QLabel("Recent Incidents")
         incidents_label.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 18px; font-weight: bold;")
         incidents_header.addWidget(incidents_label)
         
-        view_all_incidents = QPushButton("Ver Todos")
+        view_all_incidents = QPushButton("View All")
         view_all_incidents.setStyleSheet(f"""
             QPushButton {{
                 color: {PIRELLI_RED};
@@ -1045,14 +1083,14 @@ class DashboardView(QWidget):
         incidents_header.addWidget(view_all_incidents)
         incidents_layout.addLayout(incidents_header)
         
-        # Separador
+        # Separator
         incidents_separator = QFrame()
         incidents_separator.setFrameShape(QFrame.Shape.HLine)
         incidents_separator.setStyleSheet(f"background-color: {CARD_BORDER}; margin: 8px 0;")
         incidents_layout.addWidget(incidents_separator)
         
         self.incidents_table = IncidentsTable()
-        self.incidents_table.setMinimumHeight(250)  # Altura mínima para la tabla
+        self.incidents_table.setMinimumHeight(250)  # Minimum height for the table
         incidents_layout.addWidget(self.incidents_table)
         
         assets_layout.addWidget(incidents_frame)
@@ -1060,7 +1098,7 @@ class DashboardView(QWidget):
         
         self.create_recent_activities()
 
-        # Pie de página mejorado
+        # Improved footer
         footer = QFrame()
         footer.setStyleSheet(f"""
             QFrame {{
@@ -1076,7 +1114,7 @@ class DashboardView(QWidget):
         company_layout = QVBoxLayout()
         company_logo = QLabel("PIRELLI")
         company_logo.setStyleSheet(f"color: {PIRELLI_RED}; font-size: 18px; font-weight: bold;")
-        company_text = QLabel("© 2025 Pirelli - Sistema de Gestión ERP - v.2.3.1")
+        company_text = QLabel("© 2025 Pirelli - Enterprise Management System - v.2.3.1")
         company_text.setStyleSheet(f"color: {PIRELLI_GRAY}; font-size: 12px;")
         company_layout.addWidget(company_logo)
         company_layout.addWidget(company_text)
@@ -1087,7 +1125,7 @@ class DashboardView(QWidget):
         footer_links = QHBoxLayout()
         footer_links.setSpacing(20)
         
-        help_btn = QPushButton("Ayuda")
+        help_btn = QPushButton("Help")
         help_btn.setStyleSheet(f"""
             QPushButton {{
                 color: {PIRELLI_GRAY};
@@ -1101,7 +1139,7 @@ class DashboardView(QWidget):
             }}
         """)
         
-        contact_btn = QPushButton("Contacto")
+        contact_btn = QPushButton("Contact")
         contact_btn.setStyleSheet(f"""
             QPushButton {{
                 color: {PIRELLI_GRAY};
@@ -1115,7 +1153,7 @@ class DashboardView(QWidget):
             }}
         """)
         
-        about_btn = QPushButton("Acerca de")
+        about_btn = QPushButton("About")
         about_btn.setStyleSheet(f"""
             QPushButton {{
                 color: {PIRELLI_GRAY};
@@ -1136,70 +1174,76 @@ class DashboardView(QWidget):
         footer_layout.addLayout(footer_links)
         self.main_layout.addWidget(footer)
 
+    def update_time(self):
+        """Updates date and time in the dashboard"""
+        fecha_actual, hora_actual = get_formatted_date()
+        self.date_label.setText(fecha_actual)
+        self.time_label.setText(hora_actual)
+        
     def create_statistic_cards(self):
-        """Crea las tarjetas estadísticas con estilo Pirelli mejorado"""
-        section_title = QLabel("Indicadores Clave de Rendimiento")
+        """Creates statistic cards with improved Pirelli style"""
+        section_title = QLabel("Key Performance Indicators")
         section_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 22px; font-weight: bold; margin-top: 10px; margin-bottom: 10px;")
         self.main_layout.addWidget(section_title)
         
         stats_layout = QGridLayout()
         stats_layout.setSpacing(24)
         
-        self.ventas_card = StatisticCard(
-            "Ventas Mensuales",
+        self.sales_card = StatisticCard(
+            "Monthly Sales",
             "$0",
             "resources/icons/sales.png",
             PIRELLI_RED
         )
-        self.ventas_card.setObjectName("ventas_card")
+        self.sales_card.setObjectName("sales_card")
         
-        self.produccion_card = StatisticCard(
-            "Producción Mensual",
-            "0 unidades",
+        self.production_card = StatisticCard(
+            "Monthly Production",
+            "0 units",
             "resources/icons/production.png",
             PIRELLI_YELLOW
         )
-        self.produccion_card.setObjectName("produccion_card")
+        self.production_card.setObjectName("production_card")
         
-        self.inventario_card = StatisticCard(
-            "Nivel de Inventario",
+        self.inventory_card = StatisticCard(
+            "Inventory Level",
             "0%",
             "resources/icons/inventory.png",
             PIRELLI_DARK
         )
-        self.inventario_card.setObjectName("inventario_card")
+        self.inventory_card.setObjectName("inventory_card")
         
-        self.empleados_card = StatisticCard(
-            "Empleados Activos",
+        self.employees_card = StatisticCard(
+            "Active Employees",
             "0",
             "resources/icons/employee.png",
             PIRELLI_GRAY
         )
-        self.empleados_card.setObjectName("empleados_card")
+        self.employees_card.setObjectName("employees_card")
         
-        stats_layout.addWidget(self.ventas_card, 0, 0)
-        stats_layout.addWidget(self.produccion_card, 0, 1)
-        stats_layout.addWidget(self.inventario_card, 1, 0)
-        stats_layout.addWidget(self.empleados_card, 1, 1)
+        stats_layout.addWidget(self.sales_card, 0, 0)
+        stats_layout.addWidget(self.production_card, 0, 1)
+        stats_layout.addWidget(self.inventory_card, 1, 0)
+        stats_layout.addWidget(self.employees_card, 1, 1)
         
         self.main_layout.addLayout(stats_layout)
 
     def create_chart_cards(self):
-        """Crea las tarjetas para gráficos con estilo Pirelli mejorado"""
-        section_title = QLabel("Análisis de Rendimiento")
+        """Creates chart cards with improved Pirelli style"""
+        section_title = QLabel("Performance Analysis")
         section_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 22px; font-weight: bold; margin-top: 20px; margin-bottom: 10px;")
         self.main_layout.addWidget(section_title)
         
         charts_layout = QHBoxLayout()
         charts_layout.setSpacing(24)
         
-        self.materials_chart = ChartCard("Distribución de Materiales", "pie")
+        self.materials_chart = ChartCard("Materials Distribution", "pie")
         self.materials_chart.setObjectName("materials_chart")
-        self.materials_chart.setMinimumHeight(400)  # Altura mínima para el gráfico
+        self.materials_chart.setMinimumHeight(400)  # Minimum height for the chart
         
-        self.production_chart = ChartCard("Ventas vs Producción", "bar")
+        self.production_chart = ChartCard("Sales vs Production", "bar")
         self.production_chart.setObjectName("production_chart")
-        self.production_chart.setMinimumHeight(400)  # Altura mínima para el gráfico
+        self.production_chart.setMinimumHeight(400)  # Minimum height for the chart
         
         charts_layout.addWidget(self.materials_chart)
         charts_layout.addWidget(self.production_chart)
@@ -1207,8 +1251,8 @@ class DashboardView(QWidget):
         self.main_layout.addLayout(charts_layout)
 
     def create_recent_activities(self):
-        """Crea la sección de actividades recientes con estilo Pirelli mejorado"""
-        section_title = QLabel("Actividades Recientes")
+        """Creates recent activities section with improved Pirelli style"""
+        section_title = QLabel("Recent Activities")
         section_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 22px; font-weight: bold; margin-top: 20px; margin-bottom: 10px;")
         self.main_layout.addWidget(section_title)
         
@@ -1233,11 +1277,11 @@ class DashboardView(QWidget):
         self.activities_layout.setSpacing(16)
         
         activities_header = QHBoxLayout()
-        activities_title = QLabel("Últimas Actualizaciones")
+        activities_title = QLabel("Latest Updates")
         activities_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 18px; font-weight: bold;")
         activities_header.addWidget(activities_title)
         
-        view_all_btn = QPushButton("Ver Todo")
+        view_all_btn = QPushButton("View All")
         view_all_btn.setStyleSheet(f"""
             QPushButton {{
                 color: {PIRELLI_RED};
@@ -1255,13 +1299,13 @@ class DashboardView(QWidget):
         activities_header.addWidget(view_all_btn)
         self.activities_layout.addLayout(activities_header)
         
-        # Separador
+        # Separator
         activities_separator = QFrame()
         activities_separator.setFrameShape(QFrame.Shape.HLine)
         activities_separator.setStyleSheet(f"background-color: {CARD_BORDER}; margin: 8px 0;")
         self.activities_layout.addWidget(activities_separator)
         
-        placeholder_label = QLabel("Cargando actividades recientes...")
+        placeholder_label = QLabel("Loading recent activities...")
         placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         placeholder_label.setStyleSheet(f"color: {PIRELLI_GRAY}; font-style: italic; padding: 20px;")
         self.activities_layout.addWidget(placeholder_label)
@@ -1269,8 +1313,8 @@ class DashboardView(QWidget):
         self.main_layout.addWidget(self.activities_frame)
 
     def update_recent_activities(self, activities):
-        """Actualiza la lista de actividades recientes con estilo Pirelli mejorado"""
-        # Limpia el layout
+        """Updates the list of recent activities with improved Pirelli style"""
+        # Clear the layout
         while self.activities_layout.count():
             item = self.activities_layout.takeAt(0)
             widget = item.widget()
@@ -1285,13 +1329,13 @@ class DashboardView(QWidget):
                         if sub_widget is not None:
                             sub_widget.deleteLater()
         
-        # Recrear el encabezado
+        # Recreate the header
         activities_header = QHBoxLayout()
-        activities_title = QLabel("Últimas Actualizaciones")
+        activities_title = QLabel("Latest Updates")
         activities_title.setStyleSheet(f"color: {PIRELLI_DARK}; font-size: 18px; font-weight: bold;")
         activities_header.addWidget(activities_title)
         
-        view_all_btn = QPushButton("Ver Todo")
+        view_all_btn = QPushButton("View All")
         view_all_btn.setStyleSheet(f"""
             QPushButton {{
                 color: {PIRELLI_RED};
@@ -1309,22 +1353,22 @@ class DashboardView(QWidget):
         activities_header.addWidget(view_all_btn)
         self.activities_layout.addLayout(activities_header)
         
-        # Separador
+        # Separator
         activities_separator = QFrame()
         activities_separator.setFrameShape(QFrame.Shape.HLine)
         activities_separator.setStyleSheet(f"background-color: {CARD_BORDER}; margin: 8px 0;")
         self.activities_layout.addWidget(activities_separator)
         
-        # Agrega las nuevas actividades
+        # Add new activities
         if not activities:
-            no_data_label = QLabel("No hay actividades recientes disponibles")
+            no_data_label = QLabel("No recent activities available")
             no_data_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             no_data_label.setStyleSheet(f"color: {PIRELLI_GRAY}; font-style: italic; padding: 20px;")
             self.activities_layout.addWidget(no_data_label)
         else:
-            for idx, actividad in enumerate(activities):
-                title = actividad.get("titulo", "")
-                time = actividad.get("tiempo", "")
+            for idx, activity in enumerate(activities):
+                title = activity.get("titulo", "")
+                time = activity.get("tiempo", "")
                 icon_path = None
                 icon_color = PIRELLI_RED
                 
@@ -1347,7 +1391,7 @@ class DashboardView(QWidget):
                     icon_path = "resources/icons/order.png"
                     icon_color = PIRELLI_GRAY
                 
-                # Tarjeta de actividad
+                # Activity card
                 activity_frame = AnimatedFrame()
                 activity_frame.setStyleSheet(f"""
                     QFrame {{
@@ -1389,7 +1433,7 @@ class DashboardView(QWidget):
                 activity_layout.addLayout(info_layout)
                 activity_layout.addStretch()
                 
-                details_btn = QPushButton("Detalles")
+                details_btn = QPushButton("Details")
                 details_btn.setStyleSheet(f"""
                     QPushButton {{
                         color: {PIRELLI_RED};
@@ -1408,18 +1452,18 @@ class DashboardView(QWidget):
                 
                 self.activities_layout.addWidget(activity_frame)
                 
-                # Espaciador entre actividades
+                # Spacer between activities
                 if idx < len(activities) - 1:
                     spacer = QSpacerItem(20, 10, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
                     self.activities_layout.addItem(spacer)
 
     def refresh_data(self):
-        logging.info("Solicitando datos del dashboard al backend...")
+        logging.info("Requesting dashboard data from backend...")
         if hasattr(self, "refresh_button"):
             self.refresh_button.setEnabled(False)
-            self.refresh_button.setText(" Actualizando...")
+            self.refresh_button.setText(" Updating...")
             
-            # Añadir animación de carga
+            # Add loading animation
             self.refresh_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {PIRELLI_GRAY};
@@ -1435,11 +1479,11 @@ class DashboardView(QWidget):
         try:
             self.api_client.get_dashboard_data()
         except Exception as e:
-            logging.exception("Error al solicitar datos del dashboard")
-            self.show_error_message("No se pudo actualizar el dashboard", str(e))
+            logging.exception("Error requesting dashboard data")
+            self.show_error_message("Could not update dashboard", str(e))
             if hasattr(self, "refresh_button"):
                 self.refresh_button.setEnabled(True)
-                self.refresh_button.setText(" Actualizar Dashboard")
+                self.refresh_button.setText(" Refresh Dashboard")
                 self.refresh_button.setStyleSheet(f"""
                     QPushButton {{
                         background-color: {PIRELLI_RED};
@@ -1459,13 +1503,13 @@ class DashboardView(QWidget):
                 """)
 
     def update_data(self, data):
-        logging.info(f"Datos recibidos en update_data: {data}")
-        # Solo procesa si es dashboard
+        logging.info(f"Data received in update_data: {data}")
+        # Only process if it's dashboard data
         if not (isinstance(data, dict) and data.get('type') == 'dashboard' and 'data' in data):
-            logging.info("update_data ignorado: no es tipo dashboard.")
+            logging.info("update_data ignored: not dashboard type.")
             if hasattr(self, "refresh_button"):
                 self.refresh_button.setEnabled(True)
-                self.refresh_button.setText(" Actualizar Dashboard")
+                self.refresh_button.setText(" Refresh Dashboard")
                 self.refresh_button.setStyleSheet(f"""
                     QPushButton {{
                         background-color: {PIRELLI_RED};
@@ -1490,7 +1534,7 @@ class DashboardView(QWidget):
         def format_number(val, decimals=0, prefix="", suffix=""):
             try:
                 if val is None or val == "" or (isinstance(val, (int, float)) and val == 0):
-                    return "Sin datos"
+                    return "No data"
                 if isinstance(val, str):
                     val = float(val)
                 if decimals == 0:
@@ -1498,16 +1542,16 @@ class DashboardView(QWidget):
                 else:
                     return f"{prefix}{val:,.{decimals}f}{suffix}".replace(",", ".")
             except Exception:
-                return "Sin datos"
+                return "No data"
                 
         try:
-            # Animación para actualizar los valores
+            # Animation to update values
             def animate_value_update(label, new_value):
-                # Crear una animación para hacer que el valor aparezca con un efecto
+                # Create animation to make the value appear with an effect
                 label.setStyleSheet(f"color: {PIRELLI_RED}; font-family: 'Segoe UI'; letter-spacing: -0.5px; font-size: 28px; font-weight: bold;")
                 label.setText(new_value)
                 
-                # Programar un timer para restaurar el estilo después de la animación
+                # Schedule a timer to restore the style after animation
                 QTimer.singleShot(500, lambda: label.setStyleSheet(f"color: {PIRELLI_RED}; font-family: 'Segoe UI'; letter-spacing: -0.5px; font-size: 28px; font-weight: bold;"))
             
             ventas = data.get('ventas_mensuales', 0)
@@ -1516,53 +1560,53 @@ class DashboardView(QWidget):
             empleados = data.get('empleados_activos', 0)
             
             ventas_str = format_number(ventas, 2, "$")
-            prod_str = format_number(prod, 0, "", " unidades")
+            prod_str = format_number(prod, 0, "", " units")
             inventario_str = format_number(inventario, 0, "", "%")
             empleados_str = format_number(empleados, 0)
             
-            # Actualizar con animación
-            animate_value_update(self.ventas_card.findChild(QLabel, "value_label"), ventas_str)
-            animate_value_update(self.produccion_card.findChild(QLabel, "value_label"), prod_str)
-            animate_value_update(self.inventario_card.findChild(QLabel, "value_label"), inventario_str)
-            animate_value_update(self.empleados_card.findChild(QLabel, "value_label"), empleados_str)
+            # Update with animation
+            animate_value_update(self.sales_card.findChild(QLabel, "value_label"), ventas_str)
+            animate_value_update(self.production_card.findChild(QLabel, "value_label"), prod_str)
+            animate_value_update(self.inventory_card.findChild(QLabel, "value_label"), inventario_str)
+            animate_value_update(self.employees_card.findChild(QLabel, "value_label"), empleados_str)
             
         except Exception as e:
-            logging.exception("Error al actualizar las tarjetas de estadísticas")
-            self.show_error_message("Error al actualizar los datos del dashboard", str(e))
+            logging.exception("Error updating statistics cards")
+            self.show_error_message("Error updating dashboard data", str(e))
             
         try:
-            # Pie chart de materiales
+            # Materials pie chart
             if 'distribucion_materiales' in data:
                 materials_chart = self.findChild(ChartCard, "materials_chart")
                 if materials_chart and hasattr(materials_chart, 'chart'):
-                    # Usar el método mejorado que maneja interactividad
+                    # Use the improved method that handles interactivity
                     materials_chart.create_pie_chart(data['distribucion_materiales'])
                     has_data = any(float(v) > 0 for v in data['distribucion_materiales'].values())
                     if not has_data:
-                        materials_chart.chart.setTitle("Distribución de Materiales (Sin datos)")
+                        materials_chart.chart.setTitle("Materials Distribution (No data)")
                     else:
                         materials_chart.chart.setTitle("")
                         
-            # Bar chart de ventas vs producción
+            # Sales vs production bar chart
             if 'ventas_vs_produccion' in data:
                 production_chart = self.findChild(ChartCard, "production_chart")
                 if production_chart and hasattr(production_chart, 'chart'):
-                    # Usar el método mejorado para crear el gráfico de barras
+                    # Use the improved method to create the bar chart
                     production_chart.create_bar_chart(data['ventas_vs_produccion'])
                     
-                    # Verificar si hay datos para mostrar un título adecuado
+                    # Check if there's data to show an appropriate title
                     ventas_list = data['ventas_vs_produccion'].get('ventas', [])
                     prod_list = data['ventas_vs_produccion'].get('produccion', [])
                     if all(float(v) if isinstance(v, (int, float, str)) and str(v).strip() else 0 == 0 for v in ventas_list) and \
                        all(float(p) if isinstance(p, (int, float, str)) and str(p).strip() else 0 == 0 for p in prod_list):
-                        production_chart.chart.setTitle("Comparación Ventas vs Producción (Sin datos)")
+                        production_chart.chart.setTitle("Sales vs Production Comparison (No data)")
                     else:
                         production_chart.chart.setTitle("")
                         
             if 'actividades_recientes' in data:
                 self.update_recent_activities(data['actividades_recientes'])
                 
-            # Actualizar los nuevos componentes
+            # Update new components
             if 'asistencias_data' in data:
                 self.attendance_chart.update_data(data['asistencias_data'])
                 
@@ -1582,11 +1626,11 @@ class DashboardView(QWidget):
                 self.incidents_table.load_data(data['incidentes_recientes'])
                 
             if hasattr(self.parent(), 'statusBar'):
-                self.parent().parent().statusBar().showMessage("Dashboard actualizado", 3000)
+                self.parent().parent().statusBar().showMessage("Dashboard updated", 3000)
                 
             if hasattr(self, "refresh_button"):
                 self.refresh_button.setEnabled(True)
-                self.refresh_button.setText(" Actualizar Dashboard")
+                self.refresh_button.setText(" Refresh Dashboard")
                 self.refresh_button.setStyleSheet(f"""
                     QPushButton {{
                         background-color: {PIRELLI_RED};
@@ -1606,11 +1650,11 @@ class DashboardView(QWidget):
                 """)
                 
         except Exception as e:
-            logging.exception("Error al actualizar los gráficos o actividades")
-            self.show_error_message("Error al actualizar los gráficos o actividades", str(e))
+            logging.exception("Error updating charts or activities")
+            self.show_error_message("Error updating charts or activities", str(e))
             if hasattr(self, "refresh_button"):
                 self.refresh_button.setEnabled(True)
-                self.refresh_button.setText(" Actualizar Dashboard")
+                self.refresh_button.setText(" Refresh Dashboard")
                 self.refresh_button.setStyleSheet(f"""
                     QPushButton {{
                         background-color: {PIRELLI_RED};
@@ -1630,11 +1674,11 @@ class DashboardView(QWidget):
                 """)
 
     def handle_api_error(self, error_msg):
-        logging.error(f"Error recibido de la API: {error_msg}")
-        self.show_error_message("Error de la API", error_msg)
+        logging.error(f"API error received: {error_msg}")
+        self.show_error_message("API Error", error_msg)
         if hasattr(self, "refresh_button"):
             self.refresh_button.setEnabled(True)
-            self.refresh_button.setText(" Actualizar Dashboard")
+            self.refresh_button.setText(" Refresh Dashboard")
             self.refresh_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {PIRELLI_RED};

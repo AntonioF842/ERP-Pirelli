@@ -1710,15 +1710,10 @@ class ApiClient(QObject):
             self.request_error.emit(f"Error al obtener recetas de producción: {str(e)}")
             return []
         
-    def get_products(self, filters=None):
-        """Obtiene la lista de productos con filtros opcionales"""
+    def get_products(self):
+        """Obtiene la lista de productos"""
         try:
-            # Envía los filtros como parámetros GET
-            response = self.session.get(
-                f"{self.base_url}/products",
-                params=filters or {}  # Envía {} si filters es None
-            )
-            
+            response = self.session.get(f"{self.base_url}/products")
             if response.status_code == 200:
                 data = response.json()
                 self.data_received.emit({"type": "products", "data": data})
