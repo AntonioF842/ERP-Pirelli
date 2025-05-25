@@ -261,7 +261,7 @@ class ProductListView(QWidget):
         # Elimina filtros vacíos/None
         api_filters = {k: v for k, v in api_filters.items() if v is not None}
         
-        self.api_client.get_products(api_filters)
+        self.api_client.get_products(filters=api_filters)
 
     def load_products(self, products):
         """Carga los productos en la tabla"""

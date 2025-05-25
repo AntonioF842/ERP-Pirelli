@@ -153,14 +153,9 @@ class ApiClient(QObject):
     
     # --- PRODUCTOS (CRUD) ---
     def get_products(self, filters=None):
-        """Obtiene la lista de productos con filtros opcionales"""
+        """Obtiene la lista de productos"""
         try:
-            # Envía los filtros como parámetros GET
-            response = self.session.get(
-                f"{self.base_url}/products",
-                params=filters or {}  # Envía {} si filters es None
-            )
-            
+            response = self.session.get(f"{self.base_url}/products")
             if response.status_code == 200:
                 data = response.json()
                 self.data_received.emit({"type": "products", "data": data})
@@ -1709,8 +1704,8 @@ class ApiClient(QObject):
         except Exception as e:
             self.request_error.emit(f"Error al obtener recetas de producción: {str(e)}")
             return []
-        
-    def get_products(self):
+
+    def get_products(self, filters=None):
         """Obtiene la lista de productos"""
         try:
             response = self.session.get(f"{self.base_url}/products")
