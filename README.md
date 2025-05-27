@@ -11,7 +11,6 @@ Un sistema ERP (Enterprise Resource Planning) diseñado para gestionar múltiple
 - [Requisitos y Dependencias](#requisitos-y-dependencias)
 - [Instalación del Backend](#instalación-del-backend)
 - [Instalación del Frontend](#instalación-del-frontend)
-- [Configuración de Base de Datos](#configuración-de-base-de-datos)
 - [Ejecución](#ejecución)
 - [Notas](#notas)
 
